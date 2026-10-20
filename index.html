@@ -1,0 +1,2095 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>綠寶算起來 - 您的熱量小幫手 v6</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              light: '#f0fdf4',
+              mint: '#a7f3d0',
+              green: '#22c55e',
+              forest: '#15803d',
+              dark: '#14532d',
+              sand: '#fdfbf7',
+              clay: '#e7e5e4',
+            }
+          },
+          animation: {
+            'bounce-slow': 'bounce 3s infinite',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'spin-slow': 'spin 8s linear infinite',
+            'slide-in-left': 'slideInLeft 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+            'vivid-icon': 'vividIcon 3.5s ease-in-out infinite',
+          },
+          keyframes: {
+            slideInLeft: {
+              '0%': { transform: 'translateX(-120vw)', opacity: '0' },
+              '75%': { transform: 'translateX(25px)', opacity: '1' },
+              '100%': { transform: 'translateX(0)', opacity: '1' },
+            },
+            vividIcon: {
+              '0%': { transform: 'scale(0.8) rotate(0deg)', opacity: '0' },
+              '20%': { transform: 'scale(1.15) rotate(15deg)', opacity: '1' },
+              '40%': { transform: 'scale(0.95) rotate(-10deg)', opacity: '0.85' },
+              '60%': { transform: 'scale(1.2) rotate(360deg)', opacity: '1' },
+              '80%': { transform: 'scale(1.05) rotate(375deg)', opacity: '0.9' },
+              '100%': { transform: 'scale(1) rotate(360deg)', opacity: '1' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- React 18 & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel Standalone -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <style>
+    /* 轉場動畫 */
+    @keyframes dropAndGrow {
+      0% { transform: translateY(-50px) scale(1); opacity: 0; }
+      10% { transform: translateY(-50px) scale(1); opacity: 1; }
+      30% { transform: translateY(20px) scale(0.8, 1.2); opacity: 1; }
+      35% { transform: translateY(30px) scale(1.5, 0.5); opacity: 0; }
+      40% { transform: translateY(30px) scale(1.5, 0.5); opacity: 0; }
+      60% { transform: translateY(0px) scale(0.5); opacity: 0; }
+      70% { transform: translateY(0px) scale(1.1); opacity: 1; }
+      85% { transform: translateY(0px) scale(0.9); opacity: 1; }
+      100% { transform: translateY(0px) scale(1); opacity: 1; }
+    }
+    .animate-drop-grow {
+      animation: dropAndGrow 3s infinite;
+    }
+    
+    /* 主頁微小幾何紋理底圖 */
+    .bg-leaf-pattern {
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2322c55e' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+  </style>
+</head>
+<body class="text-stone-800 antialiased font-sans min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // --- 1. 常數與資料庫 ---
+    const STORAGE_KEYS = {
+      PROFILE: 'calogreen_profile_v6',
+      RECORDS: 'calogreen_records_v6',
+    };
+
+    // 鼓勵風格的標語庫核心句子
+    const DAILY_QUOTES = [
+      "不要擔心昨天的放縱，今天的汗水將會帶來全新的輕盈。✨",
+      "不要擔心進步太慢，持之以恆的微小改變將會匯聚成巨大的成就。🌱",
+      "不要擔心偶爾的停滯，身體的重置將會為你帶來更強的動力。💪",
+      "不要擔心數字的起伏，鏡子裡逐漸自信的笑容才是最真實的回報。😊",
+      "不要擔心美食的誘惑，學會平衡與享受將會讓健康之路走得更遠。🥗",
+      "不要擔心流汗的辛苦，每一次深呼吸都在為未來的健康打底。🏃",
+      "不要擔心疲憊的時刻，好好睡一覺後的再出發將會更加有力。🌿",
+      "不要擔心別人的步伐，專注在屬於自己的生活節奏上，你已經超棒了！🌟"
+    ];
+
+    // 隨機對話感前綴產生器
+    const CONVERSATION_PREFIXES = [
+      (name) => `跟你說喔 ${name}，`,
+      (name) => `${name}，你知道嗎？`,
+      (name) => `嘿 ${name}！偷偷告訴你：`,
+      (name) => `${name}，今天想跟你聊聊：`,
+      (name) => `給最棒的 ${name}：`,
+      (name) => `${name} 聽我說喔，`
+    ];
+
+    // 隨機幽默稱讚句清單
+    const HUMOROUS_PRAISES = [
+      "唉唷不錯喔！今天也是活力滿滿 ✨",
+      "很久不見了，今天心情如何呢 😊",
+      "維持得很好耶！走路自帶春風 🍃",
+      "今天看起來神采奕奕，代謝力肯定爆棚 💪",
+      "照鏡子的時候，有沒有被自己的自律帥到/美到？😎",
+      "健康跟好看你全都要，這就是實力！🔥",
+      "今天也是地球上最棒的綠寶小夥伴 🌱",
+      "少吃一口多動一下，離超模身形又邁進了一小步！🥳"
+    ];
+
+    const SUCCESS_PRAISES = [
+      "太棒了！今天完美達成熱量赤字！🎉",
+      "自律的你閃閃發光，離理想身形又近一步！✨",
+      "幹得漂亮！代謝引擎正在全力運轉！🔥",
+      "今天的每一分用心，身體都會真切感謝你！🌱",
+      "控管滿分！維持這個節奏，明天繼續前進！💪"
+    ];
+
+    // 擴充美食資料庫
+    const FOOD_DATABASE = [
+      // === 日式料理 ===
+      { category: '日式料理', name: '綜合握壽司 (6貫)', kcal: 350, unit: '份' },
+      { category: '日式料理', name: '鮭魚生魚片 (5片)', kcal: 220, unit: '份' },
+      { category: '日式料理', name: '日式豚骨拉麵', kcal: 720, unit: '碗' },
+      { category: '日式料理', name: '味噌湯', kcal: 80, unit: '碗' },
+      { category: '日式料理', name: '日式炸豬排定食', kcal: 950, unit: '份' },
+      { category: '日式料理', name: '日式咖哩飯', kcal: 820, unit: '份' },
+      { category: '日式料理', name: '牛丼 (中碗)', kcal: 650, unit: '碗' },
+      { category: '日式料理', name: '親子丼', kcal: 580, unit: '碗' },
+      { category: '日式料理', name: '天婦羅炸蝦拼盤', kcal: 450, unit: '份' },
+      { category: '日式料理', name: '蕎麥麵 (冷)', kcal: 280, unit: '份' },
+      { category: '日式料理', name: '炒烏龍麵', kcal: 500, unit: '份' },
+      { category: '日式料理', name: '關東煮 (5樣不喝湯)', kcal: 200, unit: '份' },
+      { category: '日式料理', name: '茶碗蒸', kcal: 130, unit: '碗' },
+      { category: '日式料理', name: '蒲燒鰻魚飯', kcal: 880, unit: '份' },
+      { category: '日式料理', name: '日式烤鹽鯖魚', kcal: 380, unit: '份' },
+
+      // === 韓式料理 ===
+      { category: '韓式料理', name: '韓式石鍋拌飯', kcal: 680, unit: '碗' },
+      { category: '韓式料理', name: '韓式部隊鍋 (個人鍋)', kcal: 820, unit: '鍋' },
+      { category: '韓式料理', name: '韓式泡菜豆腐鍋', kcal: 450, unit: '鍋' },
+      { category: '韓式料理', name: '韓式辣炒年糕 (中份)', kcal: 480, unit: '份' },
+      { category: '韓式料理', name: '韓式海鮮煎餅 (2片)', kcal: 340, unit: '份' },
+      { category: '韓式料理', name: '韓式洋釀炸雞 (4塊)', kcal: 560, unit: '份' },
+      { category: '韓式料理', name: '韓式烤五花肉 (生菜包肉150g)', kcal: 490, unit: '份' },
+      { category: '韓式料理', name: '韓式炸醬麵', kcal: 620, unit: '碗' },
+
+      // === 夜市小吃 & 碳烤 ===
+      { category: '夜市小吃', name: '鹽酥雞 (中份不加辣粉)', kcal: 550, unit: '份' },
+      { category: '夜市小吃', name: '碳烤特大雞排 (刷醬1片)', kcal: 720, unit: '片' },
+      { category: '夜市小吃', name: '大腸包小腸 (1組)', kcal: 580, unit: '組' },
+      { category: '夜市小吃', name: '炸脆皮臭豆腐 (4塊含泡菜)', kcal: 490, unit: '份' },
+      { category: '夜市小吃', name: '清蒸臭豆腐 (1碗)', kcal: 260, unit: '碗' },
+      { category: '夜市小吃', name: '地瓜球 / QQ蛋 (1包10顆)', kcal: 320, unit: '包' },
+      { category: '夜市小吃', name: '蚵仔煎 (標準1份)', kcal: 510, unit: '份' },
+      { category: '夜市小吃', name: '碳烤香腸 (1根)', kcal: 240, unit: '根' },
+      { category: '夜市小吃', name: '碳烤甜不辣 (2片刷醬)', kcal: 210, unit: '串' },
+      { category: '夜市小吃', name: '碳烤七里香 (雞屁股1串)', kcal: 280, unit: '串' },
+      { category: '夜市小吃', name: '碳烤魷魚 (整隻刷醬)', kcal: 330, unit: '隻' },
+
+      // === 台/美/義式餐點 ===
+      { category: '一般餐點', name: '白飯 (1碗約200g)', kcal: 280, unit: '碗' },
+      { category: '一般餐點', name: '糙米飯 (1碗約200g)', kcal: 260, unit: '碗' },
+      { category: '一般餐點', name: '地瓜 (中型1顆約150g)', kcal: 170, unit: '顆' },
+      { category: '一般餐點', name: '排骨便當 (標準)', kcal: 780, unit: '個' },
+      { category: '一般餐點', name: '炸雞腿便當 (標準)', kcal: 880, unit: '個' },
+      { category: '一般餐點', name: '滷肉飯 (小碗)', kcal: 430, unit: '碗' },
+      { category: '一般餐點', name: '牛肉麵 (紅燒1碗)', kcal: 650, unit: '碗' },
+      { category: '一般餐點', name: '水煮雞胸肉 (100g)', kcal: 110, unit: '份' },
+      { category: '一般餐點', name: '燙青菜 (少油份量)', kcal: 65, unit: '份' },
+      { category: '一般餐點', name: '水煮蛋 (1顆)', kcal: 75, unit: '顆' },
+      { category: '一般餐點', name: '美式漢堡 (大麥克)', kcal: 540, unit: '個' },
+      { category: '一般餐點', name: '義大利肉醬麵', kcal: 640, unit: '份' },
+      { category: '一般餐點', name: '夏威夷披薩 (1片)', kcal: 250, unit: '片' },
+
+      // === 飲料與現泡茶飲 ===
+      { category: '飲料', name: '錫蘭紅茶 (大杯無糖)', kcal: 0, unit: '杯' },
+      { category: '飲料', name: '茉莉綠茶 (大杯無糖)', kcal: 0, unit: '杯' },
+      { category: '飲料', name: '四季春茶 (大杯無糖)', kcal: 0, unit: '杯' },
+      { category: '飲料', name: '凍頂烏龍茶 (大杯無糖)', kcal: 0, unit: '杯' },
+      { category: '飲料', name: '珍珠奶茶 (大杯全糖)', kcal: 680, unit: '杯' },
+      { category: '飲料', name: '珍珠奶茶 (大杯微糖)', kcal: 480, unit: '杯' },
+      { category: '飲料', name: '鮮奶紅茶 / 紅茶拿鐵 (微糖)', kcal: 230, unit: '杯' },
+      { category: '飲料', name: '冰淇淋紅茶 (微糖)', kcal: 340, unit: '杯' },
+      { category: '飲料', name: '無糖豆漿 (中杯350ml)', kcal: 120, unit: '杯' },
+      { category: '飲料', name: '拿鐵咖啡 (中杯無糖)', kcal: 130, unit: '杯' },
+      { category: '飲料', name: '美式咖啡 (中杯無糖)', kcal: 10, unit: '杯' },
+
+      // === 點心與蛋糕甜點 ===
+      { category: '點心蛋糕', name: '經典提拉米蘇 (1片)', kcal: 360, unit: '片' },
+      { category: '點心蛋糕', name: '黑森林巧克力蛋糕 (1片)', kcal: 410, unit: '片' },
+      { category: '點心蛋糕', name: '重乳酪起司蛋糕 (1片)', kcal: 380, unit: '片' },
+      { category: '點心蛋糕', name: '草莓鮮奶油戚風蛋糕 (1片)', kcal: 290, unit: '片' },
+      { category: '點心蛋糕', name: '原味生乳捲 (1切片)', kcal: 240, unit: '片' },
+      { category: '點心蛋糕', name: '葡式蛋塔 (1顆)', kcal: 250, unit: '顆' },
+      { category: '點心蛋糕', name: '車輪餅 / 紅豆餅 (1個)', kcal: 230, unit: '個' },
+      { category: '點心蛋糕', name: '義美小泡芙 (1包半盒)', kcal: 310, unit: '包' },
+      { category: '點心蛋糕', name: '洋芋片 (1小包)', kcal: 160, unit: '包' },
+
+      // === 水果 ===
+      { category: '水果', name: '新鮮藍莓 (1小盒約100g)', kcal: 57, unit: '盒' },
+      { category: '水果', name: '新鮮草莓 (10顆約150g)', kcal: 48, unit: '份' },
+      { category: '水果', name: '熱帶金鑽鳳梨 (切塊1碗)', kcal: 85, unit: '碗' },
+      { category: '水果', name: '愛文芒果 (中型1顆)', kcal: 150, unit: '顆' },
+      { category: '水果', name: '新鮮百香果 (2顆)', kcal: 65, unit: '份' },
+      { category: '水果', name: '紅肉火龍果 (半顆約200g)', kcal: 100, unit: '份' },
+      { category: '水果', name: '柳橙 / 柳丁 (中型1顆)', kcal: 60, unit: '顆' },
+      { category: '水果', name: '台灣椪柑 / 橘子 (1顆)', kcal: 50, unit: '顆' },
+      { category: '水果', name: '芭樂 / 珍珠芭樂 (中型1顆)', kcal: 120, unit: '顆' },
+      { category: '水果', name: '香蕉 (中型1根)', kcal: 90, unit: '根' },
+      { category: '水果', name: '富士蘋果 (中型1顆)', kcal: 65, unit: '顆' },
+    ];
+
+    // 運動項目資料庫
+    const EXERCISE_METS = [
+      // === 球類 ===
+      { category: '球類', name: '籃球 (全場/半場比賽)', mets: 8.0 },
+      { category: '球類', name: '棒球 / 壘球 (比賽)', mets: 5.0 },
+      { category: '球類', name: '羽毛球 (單/雙打)', mets: 6.0 },
+      { category: '球類', name: '網球 (單/雙打)', mets: 7.3 },
+      { category: '球類', name: '桌球 / 乒乓球', mets: 4.0 },
+      { category: '球類', name: '排球 (室內/沙灘)', mets: 4.5 },
+      { category: '球類', name: '足球 (比賽)', mets: 8.5 },
+      { category: '球類', name: '匹克球 (Pickleball)', mets: 4.5 },
+      { category: '球類', name: '波爾球 (Padel)', mets: 6.2 },
+
+      // === 競技武術 ===
+      { category: '競技', name: '跆拳道 (對練 Sparring)', mets: 10.0 },
+      { category: '競技', name: '跆拳道 (品勢 Poomsae)', mets: 5.5 },
+      { category: '競技', name: '柔道 (實戰 Judo)', mets: 10.3 },
+      { category: '競技', name: '空手道 (組手 Kumite)', mets: 10.0 },
+      { category: '競技', name: '巴西柔術 (BJJ)', mets: 10.5 },
+      { category: '競技', name: '散打 / 泰拳', mets: 10.8 },
+      { category: '競技', name: '拳擊 (對打/沙包)', mets: 9.0 },
+      { category: '競技', name: '西洋擊劍 (Fencing)', mets: 6.0 },
+      { category: '競技', name: '卡巴迪 (Kabaddi)', mets: 8.5 },
+
+      // === 居家/體操 ===
+      { category: '居家體操', name: '徒手深蹲/伏地挺身', mets: 5.0 },
+      { category: '居家體操', name: '高強度間歇 HIIT', mets: 9.5 },
+      { category: '居家體操', name: '跳繩 (中等節奏)', mets: 10.0 },
+      { category: '居家體操', name: '徒手柔軟操/拉筋', mets: 2.8 },
+      { category: '居家體操', name: '瑜伽 / 皮拉提斯', mets: 3.0 },
+      { category: '居家體操', name: '室內腳踏車 (中阻力)', mets: 7.0 },
+      { category: '居家體操', name: '競技體操 (單雙槓等)', mets: 6.5 },
+      { category: '居家體操', name: '韻律體操 (彩帶/球)', mets: 5.5 },
+      { category: '居家體操', name: '彈簧床/蹦床運動', mets: 6.0 },
+
+      // === 舞蹈 ===
+      { category: '舞蹈', name: '街舞 / Hip-Hop / 鎖舞', mets: 6.0 },
+      { category: '舞蹈', name: 'K-pop MV 舞蹈', mets: 6.5 },
+      { category: '舞蹈', name: '古典芭蕾舞', mets: 5.0 },
+      { category: '舞蹈', name: '現代舞 / 爵士舞', mets: 4.8 },
+      { category: '舞蹈', name: '尊巴有氧 Zumba', mets: 6.5 },
+      { category: '舞蹈', name: '國標舞', mets: 5.5 },
+
+      // === 日常/其他 ===
+      { category: '日常其他', name: '散步 / 健走 (約4km/h)', mets: 3.3 },
+      { category: '日常其他', name: '慢跑 / 慢步跑 (約8km/h)', mets: 8.0 },
+      { category: '日常其他', name: '重量訓練 / 阻力鍛鍊', mets: 5.0 },
+      { category: '日常其他', name: '游泳 (自由式/蛙式)', mets: 7.0 },
+      { category: '日常其他', name: '單車騎乘 (休閒通勤)', mets: 5.5 },
+      { category: '日常其他', name: '戰鬥陀螺 (激烈快速甩動)', mets: 3.5 }
+    ];
+
+    const ACTIVITY_LEVELS = [
+      { id: 'sedentary', label: '沙發馬鈴薯', emoji: '🛋️', factor: 1.2, desc: '整天久坐辦公、少活動' },
+      { id: 'light', label: '慢活通勤族', emoji: '🚶', factor: 1.375, desc: '日常通勤走路、偶爾爬樓梯' },
+      { id: 'moderate', label: '活力好動咖', emoji: '🏃', factor: 1.55, desc: '每週運動3~5次或常外勤' },
+      { id: 'heavy', label: '鋼鐵健身狂', emoji: '🏋️', factor: 1.725, desc: '規律重訓或大量重體力勞動' }
+    ];
+
+    const AVATAR_OPTIONS = [
+      { id: 'sprout_1', icon: '🌱' },
+      { id: 'sprout_2', icon: '🌿' },
+      { id: 'sprout_3', icon: '🍀' },
+      { id: 'flower_1', icon: '🌻' },
+      { id: 'tree_1', icon: '🌳' },
+      { id: 'blossom_1', icon: '🌸' }
+    ];
+
+    // --- 2. 輔助運算與工具函式 ---
+    function calcAge(birthdayStr) {
+      if (!birthdayStr) return 25;
+      const birth = new Date(birthdayStr);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+      return age > 0 ? age : 1;
+    }
+
+    function calcBMR(gender, weight, height, age) {
+      const w = parseFloat(weight) || 60;
+      const h = parseFloat(height) || 165;
+      const a = parseInt(age, 10) || 25;
+      if (gender === 'male') {
+        return Math.round(10 * w + 6.25 * h - 5 * a + 5);
+      } else {
+        return Math.round(10 * w + 6.25 * h - 5 * a - 161);
+      }
+    }
+
+    function calcBaseline(bmr, activityFactor) {
+      return Math.round(bmr * (activityFactor || 1.2));
+    }
+    
+    function estimateKcalFromName(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return Math.abs(hash % 650) + 120;
+    }
+
+    function getWarningMessage(deficit) {
+        if (deficit >= 1000) {
+            return { type: 'deficit', text: '⚠️ 警告：熱量赤字過大！請確保攝取足夠營養，避免過度節食或運動過量造成身體負擔。' };
+        } else if (deficit <= -1000) {
+            return { type: 'surplus', text: '⚠️ 注意：熱量大幅超標！請注意飲食份量，並試著多增加一些運動來平衡喔！' };
+        }
+        return null;
+    }
+
+    // --- 3. 漂浮並彈跳的全螢幕背景 Canvas 元件 (密度增加3倍，全螢幕邊界碰撞彈回) ---
+    function BouncingBackgroundCanvas() {
+        const canvasRef = useRef(null);
+
+        useEffect(() => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let animationFrameId;
+
+            const resizeCanvas = () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            };
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            // 種類更豐富的花苗草木果實 icon
+            const iconList = [
+                '🌱', '🌿', '🍀', '🌻', '🌸', '🌼', '🍃', '🌷', '🍄', '🍁', '🍂', 
+                '🌹', '🌾', '🌺', '🌵', '🌴', '🌲', '🌳', '🪴', '🎋', '🍇', '🍓', 
+                '🍎', '🍋', '🥑', '🥦', '🌽', '🥕', '🍏', '🫐', '🍒', '🥝'
+            ];
+
+            // 增加至 85 個左右（密度增加約 3 倍）
+            const particlesCount = 85;
+            const particles = [];
+
+            for (let i = 0; i < particlesCount; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 1.6, // 飄動速度 X
+                    vy: (Math.random() - 0.5) * 1.6, // 飄動速度 Y
+                    size: 20 + Math.random() * 26,   // 大小
+                    angle: Math.random() * Math.PI * 2,
+                    vAngle: (Math.random() - 0.5) * 0.025, // 旋轉角速度
+                    icon: iconList[Math.floor(Math.random() * iconList.length)],
+                    opacity: 0.12 + Math.random() * 0.18 // 柔和透明度
+                });
+            }
+
+            const render = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.angle += p.vAngle;
+
+                    // 螢幕邊界碰撞彈回效果 (Bounce off walls)
+                    if (p.x <= 15) {
+                        p.x = 15;
+                        p.vx = -p.vx;
+                    } else if (p.x >= canvas.width - 25) {
+                        p.x = canvas.width - 25;
+                        p.vx = -p.vx;
+                    }
+
+                    if (p.y <= 25) {
+                        p.y = 25;
+                        p.vy = -p.vy;
+                    } else if (p.y >= canvas.height - 15) {
+                        p.y = canvas.height - 15;
+                        p.vy = -p.vy;
+                    }
+
+                    // 繪製旋轉 icon
+                    ctx.save();
+                    ctx.globalAlpha = p.opacity;
+                    ctx.font = `${p.size}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.angle);
+                    ctx.fillText(p.icon, 0, 0);
+                    ctx.restore();
+                }
+
+                animationFrameId = requestAnimationFrame(render);
+            };
+
+            render();
+
+            return () => {
+                window.removeEventListener('resize', resizeCanvas);
+                cancelAnimationFrame(animationFrameId);
+            };
+        }, []);
+
+        return (
+            <canvas 
+                ref={canvasRef} 
+                className="fixed inset-0 pointer-events-none z-0 w-full h-full"
+            />
+        );
+    }
+
+    // --- 4. 主要應用元件 App ---
+    function App() {
+      const [profile, setProfile] = useState(null);
+      const [records, setRecords] = useState({});
+      const [isInitialized, setIsInitialized] = useState(false);
+      const [showSplash, setShowSplash] = useState(false);
+      const [showTransition, setShowTransition] = useState(false);
+      const [globalError, setGlobalError] = useState(null);
+
+      const [activeDate, setActiveDate] = useState(null);
+      const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+      const [isDetailPopoverOpen, setIsDetailPopoverOpen] = useState(false);
+      const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+      const [isRebirthModalOpen, setIsRebirthModalOpen] = useState(false);
+      const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+      const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
+
+      useEffect(() => {
+        try {
+          const savedProfile = localStorage.getItem(STORAGE_KEYS.PROFILE);
+          const savedRecords = localStorage.getItem(STORAGE_KEYS.RECORDS);
+          if (savedProfile) {
+            setProfile(JSON.parse(savedProfile));
+          } else {
+            setShowSplash(true);
+          }
+          if (savedRecords) {
+            setRecords(JSON.parse(savedRecords));
+          }
+          setIsInitialized(true);
+        } catch (err) {
+          console.error(err);
+          setGlobalError("讀取本機資料時發生錯誤，可能是儲存空間限制或格式異常。");
+        }
+      }, []);
+
+      const handleSaveProfile = (newProfile) => {
+        try {
+          localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(newProfile));
+          setShowSplash(false);
+          setIsProfileModalOpen(false);
+          setIsAvatarMenuOpen(false);
+          
+          if (!profile) {
+            setShowTransition(true);
+            setTimeout(() => {
+              setProfile(newProfile);
+              setShowTransition(false);
+            }, 3000);
+          } else {
+            setProfile(newProfile);
+          }
+        } catch (err) {
+          setGlobalError("儲存個人設定失敗！請確認瀏覽器未開啟完全阻擋儲存模式。");
+        }
+      };
+
+      const handleSaveDayRecord = (dateKey, foodItems, exerciseItems) => {
+        if (foodItems.length === 0 && exerciseItems.length === 0) {
+            setIsRecordModalOpen(false);
+            return;
+        }
+
+        try {
+          const totalIntake = foodItems.reduce((sum, item) => sum + (parseFloat(item.totalKcal) || 0), 0);
+          const totalBurn = exerciseItems.reduce((sum, item) => sum + (parseFloat(item.burnKcal) || 0), 0);
+          const baseline = profile ? profile.baseline : 1500;
+          const deficit = Math.round((baseline + totalBurn) - totalIntake);
+          const isSuccess = deficit >= 0;
+
+          const updatedDay = {
+            foods: foodItems,
+            exercises: exerciseItems,
+            summary: {
+              intake: Math.round(totalIntake),
+              burn: Math.round(totalBurn),
+              deficit,
+              isSuccess
+            }
+          };
+
+          const newRecords = { ...records, [dateKey]: updatedDay };
+          localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(newRecords));
+          setRecords(newRecords);
+          setIsRecordModalOpen(false);
+
+          if (isSuccess && deficit < 1000 && window.confetti) {
+            window.confetti({
+              particleCount: 50,
+              spread: 60,
+              origin: { y: 0.6 },
+              colors: ['#22c55e', '#86efac', '#15803d', '#facc15']
+            });
+          }
+        } catch (err) {
+          setGlobalError("儲存當日紀錄失敗！請點擊重試以重新整理。");
+        }
+      };
+
+      const handleDeleteDayRecord = (dateKey) => {
+        try {
+          const newRecords = { ...records };
+          delete newRecords[dateKey];
+          localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(newRecords));
+          setRecords(newRecords);
+          setIsDeleteModalOpen(false);
+          setIsDetailPopoverOpen(false);
+        } catch (err) {
+          setGlobalError("刪除紀錄失敗！請點擊重試。");
+        }
+      };
+
+      const handleRebirth = () => {
+        try {
+          localStorage.removeItem(STORAGE_KEYS.PROFILE);
+          localStorage.removeItem(STORAGE_KEYS.RECORDS);
+          setProfile(null);
+          setRecords({});
+          setIsRebirthModalOpen(false);
+          setIsDetailPopoverOpen(false);
+          setIsRecordModalOpen(false);
+          setIsAvatarMenuOpen(false);
+          setShowSplash(true);
+        } catch (err) {
+          setGlobalError("重置失敗！請點擊重試重整頁面。");
+        }
+      };
+
+      if (!isInitialized) return null;
+
+      if (!profile || showSplash) {
+        return (
+          <div>
+            {showTransition ? (
+              <TransitionLoadingScreen username={JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILE))?.username} />
+            ) : (
+              <OnboardingFlow 
+                onComplete={handleSaveProfile} 
+                skipSplashDirectly={!showSplash && !profile}
+              />
+            )}
+            {globalError && <GlobalErrorModal message={globalError} />}
+          </div>
+        );
+      }
+
+      return (
+        <div className="bg-gradient-to-br from-[#dcfce7] via-[#f0fdf4] to-[#d1fae5] min-h-screen relative bg-leaf-pattern pb-24">
+          {/* 全螢幕 85+ 顆隨機漂浮且撞牆彈回的背景 Canvas */}
+          <BouncingBackgroundCanvas />
+
+          <div className="max-w-5xl mx-auto px-4 py-6 md:py-8 relative z-10">
+            {/* 頂部 Header (右上角只保留編輯個人資料) */}
+            <Header onOpenProfile={() => setIsProfileModalOpen(true)} />
+
+            {/* 心情小語獨立區塊 (帶名字對話感) */}
+            <SloganBanner username={profile.username} />
+
+            {/* 區塊一：個人檔案摘要卡片 (含下方隨機幽默稱讚) */}
+            <ProfileSummaryCard 
+              profile={profile} 
+              onEdit={() => setIsProfileModalOpen(true)}
+              onOpenAvatarMenu={() => setIsAvatarMenuOpen(true)}
+            />
+
+            {/* 區塊二：月曆互動區 */}
+            <CalendarView 
+              profile={profile}
+              records={records}
+              onSelectDate={(dateKey, hasRecord) => {
+                setActiveDate(dateKey);
+                if (hasRecord) {
+                  setIsDetailPopoverOpen(true);
+                } else {
+                  setIsRecordModalOpen(true);
+                }
+              }}
+            />
+
+            {/* 點擊綠/橘底格子的明細彈窗 */}
+            {isDetailPopoverOpen && activeDate && records[activeDate] && (
+              <DetailPopover 
+                dateKey={activeDate}
+                record={records[activeDate]}
+                baseline={profile.baseline}
+                onClose={() => setIsDetailPopoverOpen(false)}
+                onEdit={() => {
+                  setIsDetailPopoverOpen(false);
+                  setIsRecordModalOpen(true);
+                }}
+                onDeleteRequest={() => setIsDeleteModalOpen(true)}
+              />
+            )}
+
+            {/* 填寫 / 編輯飲食運動的 Dialog */}
+            {isRecordModalOpen && activeDate && (
+              <RecordModal 
+                dateKey={activeDate}
+                initialRecord={records[activeDate]}
+                userWeight={profile.weight}
+                baseline={profile.baseline}
+                onClose={() => setIsRecordModalOpen(false)}
+                onSave={(foodItems, exerciseItems) => handleSaveDayRecord(activeDate, foodItems, exerciseItems)}
+              />
+            )}
+
+            {/* 編輯個人資料 Modal */}
+            {isProfileModalOpen && (
+              <ProfileEditModal 
+                initialProfile={profile}
+                onClose={() => setIsProfileModalOpen(false)}
+                onSave={handleSaveProfile}
+              />
+            )}
+
+            {/* 大頭貼編輯選單 */}
+            {isAvatarMenuOpen && (
+              <AvatarEditModal
+                currentProfile={profile}
+                onClose={() => setIsAvatarMenuOpen(false)}
+                onSave={handleSaveProfile}
+              />
+            )}
+
+            {/* 重新出生孟婆湯確認視窗 */}
+            {isRebirthModalOpen && (
+              <RebirthConfirmModal 
+                onClose={() => setIsRebirthModalOpen(false)}
+                onConfirm={handleRebirth}
+              />
+            )}
+
+            {/* 單日紀錄刪除確認視窗 */}
+            {isDeleteModalOpen && (
+              <DeleteConfirmModal 
+                dateKey={activeDate}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={() => handleDeleteDayRecord(activeDate)}
+              />
+            )}
+
+            {/* 全域錯誤視窗 */}
+            {globalError && (
+              <GlobalErrorModal message={globalError} />
+            )}
+
+            {/* 主頁下方資訊欄：左下角重新出生，右下角免責聲明 */}
+            <div className="mt-12 flex flex-col md:flex-row items-center justify-between gap-4">
+              {/* 「重新出生」移至左下角，防呆不誤觸 */}
+              <button 
+                onClick={() => setIsRebirthModalOpen(true)} 
+                title="重新出生 (清除所有資料)"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/75 hover:bg-rose-50 border border-stone-200/80 hover:border-rose-300 text-stone-500 hover:text-rose-600 shadow-sm backdrop-blur-md transition-all group cursor-pointer text-xs md:text-sm font-bold"
+              >
+                <span className="text-xl group-hover:scale-125 transition-transform">👶</span>
+                <span>重新出生</span>
+              </button>
+
+              {/* 右下角營養師免責聲明備註 */}
+              <div className="text-center md:text-right">
+                <span className="inline-block bg-white/80 backdrop-blur-sm border border-emerald-200/60 px-4 py-2 rounded-2xl text-xs text-stone-500 font-bold shadow-sm">
+                  💡 本小工具僅供試算參考，不代表真正準確的數值，如有問題請諮詢專業營養師
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- 4.5 轉場讀取畫面 ---
+    function TransitionLoadingScreen({ username }) {
+      return (
+        <div className="fixed inset-0 bg-gradient-to-b from-[#86efac] to-[#22c55e] flex flex-col items-center justify-center z-50">
+          <div className="text-center relative">
+             <div className="w-40 h-40 mx-auto relative">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-8xl animate-drop-grow">
+                    🌱
+                  </div>
+                </div>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 animate-[dropAndGrow_3s_infinite_reverse]">
+                   <div className="text-6xl opacity-50">💧</div>
+                </div>
+             </div>
+             <h2 className="text-3xl font-bold text-white mt-8 tracking-wider">{username || '新朋友'}，準備出生中...</h2>
+             <p className="text-emerald-50 mt-4 text-lg font-medium">為您計算專屬代謝基準，請稍候片刻 🌿</p>
+             
+             <div className="w-64 h-3 bg-black/20 rounded-full mx-auto mt-8 overflow-hidden">
+                <div className="h-full bg-white rounded-full animate-[pulse_1.5s_ease-in-out_infinite]" style={{ width: '70%' }}></div>
+             </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- 5. 歡迎頁與漸進式引導 Flow (生動旋轉淡入淡出、左側滑入標題、跳過在右下角) ---
+    function OnboardingFlow({ onComplete, skipSplashDirectly }) {
+      const [inSplash, setInSplash] = useState(!skipSplashDirectly);
+      const [splashStage, setSplashStage] = useState(0);
+      const [step, setStep] = useState(1);
+
+      const [username, setUsername] = useState('');
+      const [gender, setGender] = useState('female');
+      const [birthday, setBirthday] = useState('1998-06-15');
+      const [height, setHeight] = useState('165');
+      const [weight, setWeight] = useState('58');
+      const [activityLevel, setActivityLevel] = useState('sedentary');
+      
+      const [avatarType, setAvatarType] = useState('sprout_1');
+      const [avatarImage, setAvatarImage] = useState(null);
+      const fileInputRef = useRef(null);
+
+      // 動畫節奏控制
+      useEffect(() => {
+        if (!skipSplashDirectly && inSplash) {
+          const t1 = setTimeout(() => setSplashStage(1), 1200);
+          const t2 = setTimeout(() => setSplashStage(2), 2600);
+          const t3 = setTimeout(() => setInSplash(false), 5800);
+          return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+        }
+      }, [inSplash, skipSplashDirectly]);
+
+      const age = useMemo(() => calcAge(birthday), [birthday]);
+
+      const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setAvatarImage(reader.result);
+            setAvatarType('custom');
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+
+      const handleFinish = () => {
+        const finalName = username.trim().slice(0, 10) || '綠寶好友';
+        const bmr = calcBMR(gender, weight, height, age);
+        const selectedAct = ACTIVITY_LEVELS.find(a => a.id === activityLevel) || ACTIVITY_LEVELS[0];
+        const baseline = calcBaseline(bmr, selectedAct.factor);
+        
+        let finalAvatar = avatarType;
+        if (avatarType === 'custom' && avatarImage) {
+            finalAvatar = avatarImage;
+        } else if (avatarType === 'custom' && !avatarImage) {
+            finalAvatar = 'sprout_1';
+        }
+
+        onComplete({
+          username: finalName,
+          gender,
+          birthday,
+          age,
+          height: parseFloat(height) || 165,
+          weight: parseFloat(weight) || 60,
+          activity: activityLevel,
+          activityFactor: selectedAct.factor,
+          bmr,
+          baseline,
+          avatar: finalAvatar
+        });
+      };
+
+      if (inSplash) {
+        return (
+          <div className="fixed inset-0 bg-gradient-to-br from-[#a7f3d0] via-[#86efac] to-[#22c55e] flex flex-col items-center justify-center p-6 z-50 overflow-hidden">
+            <div className="text-center relative">
+              {/* 生動的圖示動畫：旋轉、縮放與淡入淡出 */}
+              <div className="w-60 h-60 mx-auto mb-8 flex items-center justify-center relative">
+                 <div className={`absolute text-9xl transition-all duration-1000 ease-in-out ${
+                    splashStage === 0 
+                      ? 'opacity-100 scale-100 rotate-0' 
+                      : 'opacity-0 scale-50 -rotate-90'
+                 }`}>
+                    👶
+                 </div>
+                 <div className={`absolute text-9xl transition-all duration-1000 ease-in-out ${
+                    splashStage === 1 
+                      ? 'opacity-100 scale-125 rotate-180 animate-spin-slow' 
+                      : 'opacity-0 scale-75 rotate-0'
+                 }`}>
+                    ✨
+                 </div>
+                 <div className={`absolute text-9xl transition-all duration-1000 ease-in-out ${
+                    splashStage >= 2 
+                      ? 'opacity-100 scale-110 rotate-0 animate-vivid-icon' 
+                      : 'opacity-0 scale-50 rotate-90'
+                 }`}>
+                    🌱😊
+                 </div>
+              </div>
+
+              {/* 文字標題從螢幕左邊滑入到中間 */}
+              <div className="animate-slide-in-left">
+                <h1 className="text-5xl md:text-6xl font-black text-[#064e3b] tracking-wide mb-4 drop-shadow-md">
+                  綠寶算起來
+                </h1>
+                <p className="text-[#065f46] text-xl md:text-2xl font-bold tracking-widest drop-shadow-sm">
+                  您的熱量赤字隨身小幫手
+                </p>
+              </div>
+            </div>
+            
+            {/* 略過動畫按鈕：固定在右下角 */}
+            <button 
+              onClick={() => setInSplash(false)}
+              className="fixed bottom-6 right-6 md:bottom-8 md:right-8 px-6 py-3 bg-white/40 hover:bg-white/70 text-[#064e3b] font-black rounded-full text-base transition-all shadow-lg backdrop-blur-md border border-white/60 cursor-pointer hover:scale-105 active:scale-95 z-50"
+            >
+              略過動畫 ➔
+            </button>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4 bg-brand-sand">
+          <div className="bg-white rounded-[2rem] shadow-2xl border-4 border-emerald-100 p-8 md:p-12 max-w-2xl w-full relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 -z-10"></div>
+            
+            <div className="flex items-center justify-between mb-10">
+              <span className="text-sm font-bold text-emerald-800 bg-emerald-100 px-4 py-1.5 rounded-full border border-emerald-200">
+                步驟 {step} / 6
+              </span>
+              <div className="w-64 bg-stone-100 rounded-full h-3 overflow-hidden shadow-inner">
+                <div 
+                  className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full transition-all duration-500 ease-out" 
+                  style={{ width: `${(step / 6) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {step === 1 && (
+              <div className="animate-fade-in">
+                <h2 className="text-3xl font-extrabold text-stone-800 mb-3">嗨！該怎麼稱呼你呢？</h2>
+                <p className="text-base text-stone-500 mb-8">讓綠寶為你量身打造專屬的健康旅程（支援最多 10 個字元）</p>
+                <div className="relative mb-10">
+                  <input 
+                    type="text" 
+                    value={username}
+                    maxLength={10}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="例如：小綠、健走大師" 
+                    className="w-full px-6 py-5 text-2xl border-2 border-emerald-200 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all bg-stone-50"
+                  />
+                  <span className="absolute right-6 top-6 text-sm font-bold text-stone-400">
+                    {username.length}/10
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setStep(2)}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xl py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50 hover:-translate-y-1"
+                >
+                  下一步 ➔
+                </button>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="animate-fade-in">
+                <h2 className="text-3xl font-extrabold text-stone-800 mb-3">你的生理性別是？</h2>
+                <p className="text-base text-stone-500 mb-8">這有助於套用更精準的基礎代謝（BMR）科學公式</p>
+                <div className="grid grid-cols-2 gap-6 mb-10">
+                  <button 
+                    type="button"
+                    onClick={() => setGender('male')}
+                    className={`p-8 rounded-3xl border-4 flex flex-col items-center justify-center transition-all ${
+                      gender === 'male' ? 'border-emerald-500 bg-emerald-50 shadow-md scale-105' : 'border-stone-100 bg-stone-50 text-stone-500 hover:border-emerald-200'
+                    }`}
+                  >
+                    <span className="text-6xl mb-4">🙋‍♂️</span>
+                    <span className="text-2xl font-bold text-stone-800">男生</span>
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setGender('female')}
+                    className={`p-8 rounded-3xl border-4 flex flex-col items-center justify-center transition-all ${
+                      gender === 'female' ? 'border-emerald-500 bg-emerald-50 shadow-md scale-105' : 'border-stone-100 bg-stone-50 text-stone-500 hover:border-emerald-200'
+                    }`}
+                  >
+                    <span className="text-6xl mb-4">🙋‍♀️</span>
+                    <span className="text-2xl font-bold text-stone-800">女生</span>
+                  </button>
+                </div>
+                <div className="flex gap-4">
+                  <button onClick={() => setStep(1)} className="w-1/3 py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
+                  <button onClick={() => setStep(3)} className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xl py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50">下一步 ➔</button>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="animate-fade-in">
+                <h2 className="text-3xl font-extrabold text-stone-800 mb-3">你的出生年月日？</h2>
+                <p className="text-base text-stone-500 mb-8">透過日期選單，系統會自動幫您推算年齡</p>
+                <div className="mb-10">
+                  <input 
+                    type="date" 
+                    value={birthday}
+                    onChange={(e) => setBirthday(e.target.value)}
+                    className="w-full px-6 py-5 text-2xl border-2 border-emerald-200 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all bg-stone-50 mb-6"
+                  />
+                  <div className="bg-gradient-to-r from-emerald-100 to-emerald-50 text-emerald-900 px-6 py-4 rounded-2xl flex items-center justify-between border border-emerald-200">
+                    <span className="text-lg font-bold">推算目前實歲：</span>
+                    <span className="text-3xl font-black text-emerald-700">{age} <span className="text-xl">歲</span></span>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <button onClick={() => setStep(2)} className="w-1/3 py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
+                  <button onClick={() => setStep(4)} className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xl py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50">下一步 ➔</button>
+                </div>
+              </div>
+            )}
+
+            {step === 4 && (
+              <div className="animate-fade-in">
+                <h2 className="text-3xl font-extrabold text-stone-800 mb-3">你的身高與體重？</h2>
+                <p className="text-base text-stone-500 mb-8">身高與體重是計算基礎燃燒熱量的關鍵數值</p>
+                <div className="space-y-6 mb-10">
+                  <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200">
+                    <label className="block text-sm font-bold text-stone-600 mb-2">身高 (cm)</label>
+                    <input 
+                      type="number" 
+                      value={height}
+                      onChange={(e) => setHeight(e.target.value)}
+                      className="w-full px-4 py-3 text-2xl font-bold text-stone-800 bg-white border-2 border-emerald-100 rounded-xl focus:outline-none focus:border-emerald-500 transition-all" 
+                      placeholder="165"
+                    />
+                  </div>
+                  <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200">
+                    <label className="block text-sm font-bold text-stone-600 mb-2">體重 (kg)</label>
+                    <input 
+                      type="number" 
+                      value={weight}
+                      onChange={(e) => setWeight(e.target.value)}
+                      className="w-full px-4 py-3 text-2xl font-bold text-stone-800 bg-white border-2 border-emerald-100 rounded-xl focus:outline-none focus:border-emerald-500 transition-all" 
+                      placeholder="58"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <button onClick={() => setStep(3)} className="w-1/3 py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
+                  <button onClick={() => setStep(5)} className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xl py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50">下一步 ➔</button>
+                </div>
+              </div>
+            )}
+
+            {step === 5 && (
+              <div className="animate-fade-in">
+                <h2 className="text-3xl font-extrabold text-stone-800 mb-3">平常的你是怎樣的生活習慣？</h2>
+                <p className="text-base text-stone-500 mb-6">選出最符合你日常動態的選項（多選一）</p>
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                  {ACTIVITY_LEVELS.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActivityLevel(item.id)}
+                      className={`p-5 rounded-2xl border-2 text-left transition-all flex flex-col justify-between h-full ${
+                        activityLevel === item.id 
+                          ? 'border-emerald-500 bg-emerald-50 ring-4 ring-emerald-100 shadow-md scale-105' 
+                          : 'border-stone-200 bg-stone-50 hover:border-emerald-300'
+                      }`}
+                    >
+                      <span className="text-4xl mb-3">{item.emoji}</span>
+                      <div className="font-bold text-stone-800 text-lg mb-1">{item.label}</div>
+                      <div className="text-sm text-stone-500 leading-tight">{item.desc}</div>
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-4">
+                  <button onClick={() => setStep(4)} className="w-1/3 py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
+                  <button onClick={() => setStep(6)} className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xl py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50">最後一步 ➔</button>
+                </div>
+              </div>
+            )}
+            
+            {step === 6 && (
+              <div className="animate-fade-in">
+                <h2 className="text-3xl font-extrabold text-stone-800 mb-3">選個代表你的大頭貼吧！</h2>
+                <p className="text-base text-stone-500 mb-8">選擇預設的小樹苗，或是上傳自己喜歡的照片</p>
+                
+                <div className="flex flex-col items-center mb-10">
+                    <div className="w-32 h-32 rounded-full border-4 border-emerald-400 overflow-hidden bg-emerald-50 flex items-center justify-center mb-6 shadow-xl relative group">
+                        {avatarType === 'custom' && avatarImage ? (
+                            <img src={avatarImage} alt="Custom Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="text-6xl">{AVATAR_OPTIONS.find(a => a.id === avatarType)?.icon || '🌱'}</span>
+                        )}
+                        {avatarType === 'custom' && avatarImage && (
+                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-white text-sm font-bold">已上傳</span>
+                             </div>
+                        )}
+                    </div>
+                    
+                    <div className="flex gap-4 mb-6 flex-wrap justify-center">
+                        {AVATAR_OPTIONS.map(opt => (
+                            <button
+                                key={opt.id}
+                                onClick={() => setAvatarType(opt.id)}
+                                className={`w-16 h-16 rounded-full text-3xl border-2 flex items-center justify-center transition-all ${
+                                    avatarType === opt.id ? 'border-emerald-500 bg-emerald-100 scale-110 shadow-md' : 'border-stone-200 bg-stone-50 hover:bg-stone-100'
+                                }`}
+                            >
+                                {opt.icon}
+                            </button>
+                        ))}
+                    </div>
+                    
+                    <div className="relative">
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            ref={fileInputRef}
+                            onChange={handleImageUpload}
+                            className="hidden" 
+                        />
+                        <button 
+                            onClick={() => fileInputRef.current.click()}
+                            className="px-6 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-full text-sm border border-stone-300 transition-colors flex items-center gap-2"
+                        >
+                            <span>📸 上傳自訂照片</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <button onClick={() => setStep(5)} className="w-1/3 py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
+                  <button 
+                    onClick={handleFinish} 
+                    className="w-2/3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold text-xl py-4 rounded-2xl transition-all shadow-xl shadow-emerald-500/40 hover:-translate-y-1"
+                  >
+                    開啟綠寶生活 🌱
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // --- 6. 頂部 Header (右上角只保留編輯個人資料) ---
+    function Header({ onOpenProfile }) {
+      return (
+        <header className="flex flex-row items-center justify-between bg-white/85 backdrop-blur-md px-5 md:px-7 py-4 rounded-3xl shadow-sm border border-emerald-100/60 mb-4 sticky top-4 z-40">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 bg-gradient-to-br from-emerald-100 to-emerald-200 text-emerald-800 rounded-2xl text-2xl shadow-inner">🌱</span>
+            <div>
+              <h1 className="text-xl md:text-2xl font-extrabold text-emerald-950 tracking-tight">綠寶算起來</h1>
+              <p className="text-xs md:text-sm font-medium text-emerald-600">您的熱量赤字隨身小幫手</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+             {/* 編輯個人資料按鈕 */}
+             <button 
+              onClick={onOpenProfile} 
+              title="編輯個人資料"
+              className="px-4 py-2.5 rounded-2xl bg-emerald-50/90 hover:bg-emerald-100/90 border border-emerald-200/80 hover:border-emerald-300 text-emerald-800 flex items-center gap-2 transition-all cursor-pointer shadow-sm group"
+             >
+              <span className="text-xl group-hover:rotate-45 transition-transform">⚙️</span>
+              <span className="text-xs md:text-sm font-bold text-emerald-800">編輯個人資料</span>
+             </button>
+          </div>
+        </header>
+      );
+    }
+
+    // --- 7. Slogan Banner (前面加上對話感：例如「跟你說喔{名字}」) ---
+    function SloganBanner({ username }) {
+      const [displayQuote, setDisplayQuote] = useState('');
+
+      useEffect(() => {
+        const randQuote = DAILY_QUOTES[Math.floor(Math.random() * DAILY_QUOTES.length)];
+        const randPrefixFunc = CONVERSATION_PREFIXES[Math.floor(Math.random() * CONVERSATION_PREFIXES.length)];
+        const prefix = randPrefixFunc(username || '朋友');
+        setDisplayQuote(`${prefix} ${randQuote}`);
+      }, [username]);
+
+      return (
+         <div className="bg-white/75 backdrop-blur-sm border border-emerald-200/60 rounded-2xl px-6 py-3.5 mb-6 flex items-center justify-center shadow-sm relative overflow-hidden">
+             <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500"></div>
+             <span className="text-emerald-900 font-bold text-sm md:text-base tracking-wide text-center">
+                💬 {displayQuote}
+             </span>
+         </div>
+      );
+    }
+
+    // --- 8. 區塊一：個人檔案卡片 (下方增加隨機幽默稱讚句) ---
+    function ProfileSummaryCard({ profile, onEdit, onOpenAvatarMenu }) {
+      const actObj = ACTIVITY_LEVELS.find(a => a.id === profile.activity) || ACTIVITY_LEVELS[0];
+      
+      const randomHumorPraise = useMemo(() => {
+        return HUMOROUS_PRAISES[Math.floor(Math.random() * HUMOROUS_PRAISES.length)];
+      }, []);
+
+      let avatarContent;
+      if (profile.avatar && profile.avatar.startsWith('data:image')) {
+          avatarContent = <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />;
+      } else {
+          const opt = AVATAR_OPTIONS.find(a => a.id === profile.avatar);
+          avatarContent = <span className="text-4xl">{opt ? opt.icon : '🌱'}</span>;
+      }
+
+      return (
+        <div className="bg-gradient-to-br from-emerald-500 via-[#1ea354] to-forest-700 text-white rounded-[2rem] p-6 md:p-8 shadow-xl shadow-emerald-900/10 mb-8 relative overflow-hidden border border-emerald-300/40">
+          <div className="absolute -top-10 -right-10 w-48 h-48 bg-white opacity-20 rounded-full blur-2xl pointer-events-none"></div>
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-emerald-900 opacity-30 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div className="flex flex-col md:flex-row items-center md:items-center justify-between gap-8 relative z-10">
+            <div className="flex items-center gap-6">
+              <div className="relative group cursor-pointer" onClick={onOpenAvatarMenu} title="點擊更換大頭貼">
+                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-white/50 shadow-lg overflow-hidden bg-white/30 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+                      {avatarContent}
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md border border-stone-200 text-emerald-700 text-sm z-10 transition-transform group-hover:scale-110">
+                    ✏️
+                  </div>
+                  <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                     <span className="text-white text-xs font-bold tracking-widest uppercase">更換</span>
+                  </div>
+              </div>
+              
+              <div>
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-3xl font-extrabold tracking-tight drop-shadow-sm">{profile.username}</span>
+                  <span className="bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs px-3 py-1.5 rounded-full font-bold shadow-sm">
+                    {profile.gender === 'male' ? '男生' : '女生'} · {profile.age} 歲
+                  </span>
+                  <span className="bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs px-3 py-1.5 rounded-full font-bold shadow-sm">
+                    {actObj.emoji} {actObj.label}
+                  </span>
+                </div>
+                <p className="text-emerald-50 font-medium text-sm flex items-center gap-4 drop-shadow-sm mb-2">
+                  <span>📏 身高: <strong className="text-white text-base">{profile.height}</strong> cm</span>
+                  <span>⚖️ 體重: <strong className="text-white text-base">{profile.weight}</strong> kg</span>
+                </p>
+                {/* 幽默稱讚句 */}
+                <div className="inline-block bg-black/15 backdrop-blur-sm border border-white/20 px-3.5 py-1.5 rounded-xl text-xs font-bold text-mint-100 shadow-inner">
+                  ✨ {randomHumorPraise}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6 bg-white/10 backdrop-blur-lg px-8 py-5 rounded-3xl border border-white/30 shadow-inner w-full md:w-auto justify-center">
+              <div className="text-center">
+                <div className="text-xs text-emerald-100 font-bold tracking-wider mb-1 uppercase">基礎代謝 BMR</div>
+                <div className="text-3xl font-black text-white tracking-tight drop-shadow-md">{profile.bmr} <span className="text-sm font-medium text-emerald-100">kcal</span></div>
+              </div>
+              <div className="w-px h-12 bg-white/30 rounded-full" />
+              <div className="text-center">
+                <div className="text-xs text-[#d1fae5] font-bold tracking-wider mb-1 uppercase">日常基準消耗</div>
+                <div className="text-4xl font-black text-[#d1fae5] tracking-tight drop-shadow-md">{profile.baseline} <span className="text-sm font-medium text-white">kcal</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- 9. 區塊二：互動式月曆 ---
+    function CalendarView({ profile, records, onSelectDate }) {
+      const [currentDate, setCurrentDate] = useState(new Date());
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      const stats = useMemo(() => {
+        let successCount = 0;
+        let failCount = 0;
+        Object.keys(records).forEach(key => {
+          if (key.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)) {
+            if (records[key].summary) {
+              if (records[key].summary.isSuccess) successCount++;
+              else failCount++;
+            }
+          }
+        });
+        return { successCount, failCount };
+      }, [records, year, month]);
+
+      const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+      const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+
+      const calendarCells = useMemo(() => {
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const cells = [];
+
+        for (let i = 0; i < firstDayIndex; i++) {
+          cells.push({ type: 'empty', key: `empty-${i}` });
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const record = records[dateKey];
+          cells.push({
+            type: 'day',
+            day: d,
+            dateKey,
+            record
+          });
+        }
+        return cells;
+      }, [year, month, records]);
+
+      const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+
+      return (
+        <div className="bg-white/85 backdrop-blur-md rounded-[2rem] p-6 md:p-8 shadow-lg shadow-emerald-900/5 border border-white">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+            <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-stone-100 shadow-sm">
+              <button 
+                onClick={prevMonth} 
+                className="p-2 md:px-4 md:py-2 rounded-xl bg-stone-50 hover:bg-emerald-50 text-stone-700 font-bold transition shadow-sm border border-stone-100"
+              >
+                ◀
+              </button>
+              <h2 className="text-xl md:text-2xl font-black text-emerald-900 min-w-[160px] text-center tracking-wide">
+                {year} 年 {month + 1} 月
+              </h2>
+              <button 
+                onClick={nextMonth} 
+                className="p-2 md:px-4 md:py-2 rounded-xl bg-stone-50 hover:bg-emerald-50 text-stone-700 font-bold transition shadow-sm border border-stone-100"
+              >
+                ▶
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 text-sm">
+              <span className="flex items-center gap-2 bg-white text-emerald-800 px-4 py-2 rounded-2xl font-bold border border-emerald-100 shadow-sm">
+                <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm"></span> 
+                達標：{stats.successCount} 天
+              </span>
+              <span className="flex items-center gap-2 bg-white text-rose-800 px-4 py-2 rounded-2xl font-bold border border-rose-100 shadow-sm">
+                <span className="w-3 h-3 rounded-full bg-rose-500 shadow-sm"></span> 
+                超標：{stats.failCount} 天
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-7 gap-2 mb-3 text-center text-sm font-black text-stone-400">
+            {weekdays.map((w, idx) => (
+              <div key={idx} className={idx === 0 || idx === 6 ? 'text-rose-400' : 'text-emerald-700'}>
+                {w}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-2 md:gap-3">
+            {calendarCells.map((cell) => {
+              if (cell.type === 'empty') {
+                return <div key={cell.key} className="h-24 md:h-28 rounded-2xl bg-transparent" />;
+              }
+
+              const hasRecord = !!cell.record && !!cell.record.summary;
+              const isSuccess = hasRecord && cell.record.summary.isSuccess;
+              const deficit = hasRecord ? cell.record.summary.deficit : 0;
+
+              let bgStyle = "bg-white hover:bg-stone-50 text-stone-600 border border-dashed border-stone-200 shadow-sm";
+              if (hasRecord) {
+                if (isSuccess) {
+                  bgStyle = "bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 text-emerald-950 border-2 border-emerald-400 font-bold shadow-md transform hover:-translate-y-1";
+                } else {
+                  bgStyle = "bg-gradient-to-br from-rose-50 to-orange-50 hover:from-rose-100 hover:to-orange-100 text-rose-950 border-2 border-rose-300 font-bold shadow-md transform hover:-translate-y-1";
+                }
+              }
+
+              return (
+                <button
+                  key={cell.dateKey}
+                  onClick={() => onSelectDate(cell.dateKey, hasRecord)}
+                  className={`h-24 md:h-28 rounded-2xl p-3 flex flex-col justify-between text-left transition-all duration-200 relative cursor-pointer group ${bgStyle}`}
+                >
+                  <div className="flex items-start justify-between w-full">
+                    <span className={`text-lg md:text-xl font-black ${hasRecord ? '' : 'text-stone-400'}`}>{cell.day}</span>
+                    {hasRecord && (
+                      <span className="text-lg bg-white/60 rounded-full w-6 h-6 flex items-center justify-center shadow-sm">
+                        {isSuccess ? '🌱' : '⚠️'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-right w-full">
+                    {hasRecord ? (
+                      <div>
+                        <div className={`font-black text-lg md:text-xl tracking-tighter ${isSuccess ? 'text-emerald-700' : 'text-rose-600'}`}>
+                           {isSuccess ? '-' : '+'}{Math.abs(deficit)}
+                        </div>
+                        <div className="text-[10px] font-bold opacity-60 uppercase tracking-wider mt-0.5">kcal</div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity ml-auto">
+                        <span className="font-bold text-lg leading-none">+</span>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // --- 10. 泡泡視窗 ---
+    function DetailPopover({ dateKey, record, baseline, onClose, onEdit, onDeleteRequest }) {
+      const { foods = [], exercises = [], summary = {} } = record;
+      const isSuccess = summary.isSuccess;
+      const deficit = summary.deficit || 0;
+      
+      const randomPraise = useMemo(() => {
+          return SUCCESS_PRAISES[Math.floor(Math.random() * SUCCESS_PRAISES.length)];
+      }, []);
+
+      const warningMsg = getWarningMessage(deficit);
+
+      return (
+        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[2rem] max-w-md w-full p-8 shadow-2xl border-2 border-stone-100 animate-[pulse-slow_3s_ease-in-out_infinite] hover:animate-none transition-all transform scale-100">
+            <div className="flex items-center justify-between pb-4 border-b-2 border-stone-100 mb-4">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl bg-stone-50 p-2 rounded-2xl shadow-inner">{isSuccess ? '🟢' : '🟠'}</span>
+                <div>
+                    <h3 className="font-extrabold text-stone-800 text-xl">{dateKey}</h3>
+                    <p className="text-xs text-stone-500 font-bold uppercase tracking-wider">Daily Summary</p>
+                </div>
+              </div>
+              <button onClick={onClose} className="w-10 h-10 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold text-xl transition-colors">✕</button>
+            </div>
+            
+            <div className={`mb-4 px-4 py-2 rounded-xl text-sm font-bold text-center border ${isSuccess ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
+                {isSuccess ? randomPraise : "沒關係，明天繼續努力找回節奏！🌿"}
+            </div>
+
+            {warningMsg && (
+              <div className={`mb-4 px-4 py-3 rounded-xl text-xs font-bold shadow-inner ${warningMsg.type === 'deficit' ? 'bg-orange-100 text-orange-800 border border-orange-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}`}>
+                  {warningMsg.text}
+              </div>
+            )}
+
+            <div className="mb-5">
+              <h4 className="text-sm font-black text-stone-600 mb-2 flex items-center justify-between bg-stone-50 px-4 py-2 rounded-xl">
+                <span>🍽️ 總攝取 <span className="text-rose-500 ml-1">+{summary.intake}</span> kcal</span>
+                <span className="text-xs bg-white px-2 py-1 rounded-md shadow-sm">{foods.length} 項</span>
+              </h4>
+              <div className="max-h-28 overflow-y-auto space-y-2 px-1">
+                {foods.length === 0 ? <p className="text-stone-400 text-sm text-center py-2">無飲食記錄</p> : foods.map((f, i) => (
+                  <div key={i} className="flex justify-between items-center text-sm border-b border-stone-100 pb-2 last:border-0">
+                    <span className="text-stone-700 font-medium">{f.name} <span className="text-stone-400 text-xs ml-1">×{f.qty}{f.unit}</span></span>
+                    <span className="font-bold text-stone-800">{f.totalKcal}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h4 className="text-sm font-black text-stone-600 mb-2 flex items-center justify-between bg-stone-50 px-4 py-2 rounded-xl">
+                <span>🏃 總消耗 <span className="text-emerald-600 ml-1">-{summary.burn}</span> kcal</span>
+                <span className="text-xs bg-white px-2 py-1 rounded-md shadow-sm">{exercises.length} 項</span>
+              </h4>
+              <div className="max-h-28 overflow-y-auto space-y-2 px-1">
+                {exercises.length === 0 ? <p className="text-stone-400 text-sm text-center py-2">無運動記錄</p> : exercises.map((e, i) => (
+                  <div key={i} className="flex justify-between items-center text-sm border-b border-stone-100 pb-2 last:border-0">
+                    <span className="text-stone-700 font-medium">{e.name} <span className="text-stone-400 text-xs ml-1">{e.minutes}m</span></span>
+                    <span className="font-bold text-emerald-600">-{e.burnKcal}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={`p-5 rounded-2xl mb-6 relative overflow-hidden ${isSuccess ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-200' : 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-lg shadow-rose-200'}`}>
+              <div className="absolute -right-6 -top-6 text-6xl opacity-20">{isSuccess ? '🎉' : '🔥'}</div>
+              
+              <div className="text-xs text-white/80 font-mono mb-3 bg-black/10 inline-block px-3 py-1 rounded-lg">
+                {baseline}(基) + {summary.burn}(動) - {summary.intake}(食)
+              </div>
+              <div className="flex items-end justify-between">
+                <span className="text-sm font-bold opacity-90">{isSuccess ? '熱量赤字' : '熱量超標'}</span>
+                <div className="text-right">
+                    <span className="text-4xl font-black tracking-tighter">
+                    {isSuccess ? '-' : '+'}{Math.abs(summary.deficit)}
+                    </span>
+                    <span className="text-sm font-medium ml-1 opacity-80">kcal</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button 
+                onClick={onDeleteRequest} 
+                className="w-16 h-16 rounded-2xl border-2 border-rose-100 text-rose-500 hover:bg-rose-50 hover:border-rose-300 text-xl flex items-center justify-center transition-all shadow-sm shrink-0"
+                title="刪除此紀錄"
+              >
+                🗑️
+              </button>
+              <button 
+                onClick={onEdit} 
+                className="flex-1 rounded-2xl bg-stone-800 hover:bg-black text-white text-lg font-bold transition-all shadow-lg flex items-center justify-center gap-2"
+              >
+                <span>✏️</span> 編輯當日資料
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- 11. 填寫 / 編輯記錄 Modal ---
+    function RecordModal({ dateKey, initialRecord, userWeight, baseline, onClose, onSave }) {
+      const [foods, setFoods] = useState(initialRecord?.foods || []);
+      const [exercises, setExercises] = useState(initialRecord?.exercises || []);
+
+      const [foodQty, setFoodQty] = useState('1');
+      const [selectedDbFood, setSelectedDbFood] = useState(FOOD_DATABASE[0]);
+      const [isCustomFood, setIsCustomFood] = useState(false);
+      const [customFoodName, setCustomFoodName] = useState('');
+
+      const foodCategories = [...new Set(FOOD_DATABASE.map(f => f.category))];
+      const [selectedCategory, setSelectedCategory] = useState(foodCategories[0]);
+      const filteredFoods = FOOD_DATABASE.filter(f => f.category === selectedCategory);
+      
+      useEffect(() => {
+          if (filteredFoods.length > 0 && !filteredFoods.find(f => f.name === selectedDbFood.name)) {
+              setSelectedDbFood(filteredFoods[0]);
+          }
+      }, [selectedCategory]);
+
+      const exCategories = [...new Set(EXERCISE_METS.map(e => e.category))];
+      const [selectedExCategory, setSelectedExCategory] = useState(exCategories[0]);
+      const filteredExercises = EXERCISE_METS.filter(e => e.category === selectedExCategory);
+      const [selectedExercise, setSelectedExercise] = useState(EXERCISE_METS[0]);
+      const [exerciseMinutes, setExerciseMinutes] = useState('30');
+
+      useEffect(() => {
+          if (filteredExercises.length > 0 && !filteredExercises.find(e => e.name === selectedExercise.name)) {
+              setSelectedExercise(filteredExercises[0]);
+          }
+      }, [selectedExCategory]);
+
+      const handleDecimalChange = (val, setter) => {
+        if (/^\d*\.?\d*$/.test(val)) setter(val);
+      };
+
+      const handleIntegerChange = (val, setter) => {
+        if (/^\d*$/.test(val)) setter(val);
+      };
+
+      const handleAddFood = () => {
+        const qtyNum = parseFloat(foodQty) || 1;
+        if (isCustomFood) {
+          if (!customFoodName.trim()) return;
+          const estimatedKcal = estimateKcalFromName(customFoodName.trim());
+          setFoods([...foods, {
+            name: customFoodName.trim() + ' (估)',
+            qty: qtyNum,
+            unit: '份',
+            kcalPerUnit: estimatedKcal,
+            totalKcal: Math.round(estimatedKcal * qtyNum)
+          }]);
+          setCustomFoodName('');
+        } else {
+          setFoods([...foods, {
+            name: selectedDbFood.name,
+            qty: qtyNum,
+            unit: selectedDbFood.unit,
+            kcalPerUnit: selectedDbFood.kcal,
+            totalKcal: Math.round(selectedDbFood.kcal * qtyNum)
+          }]);
+        }
+        setFoodQty('1');
+      };
+
+      const handleRemoveFood = (idx) => {
+        setFoods(foods.filter((_, i) => i !== idx));
+      };
+
+      const handleAddExercise = () => {
+        const mins = parseInt(exerciseMinutes, 10) || 0;
+        if (mins <= 0) return;
+        const hours = mins / 60;
+        const burnKcal = Math.round(selectedExercise.mets * (parseFloat(userWeight) || 60) * hours);
+
+        setExercises([...exercises, {
+          name: selectedExercise.name,
+          minutes: mins,
+          mets: selectedExercise.mets,
+          burnKcal
+        }]);
+        setExerciseMinutes('30');
+      };
+
+      const handleRemoveExercise = (idx) => {
+        setExercises(exercises.filter((_, i) => i !== idx));
+      };
+
+      const totalIntake = foods.reduce((sum, item) => sum + (parseFloat(item.totalKcal) || 0), 0);
+      const totalBurn = exercises.reduce((sum, item) => sum + (parseFloat(item.burnKcal) || 0), 0);
+      const deficit = Math.round((baseline + totalBurn) - totalIntake);
+
+      const warningMsg = getWarningMessage(deficit);
+
+      return (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto py-10">
+          <div className="bg-white rounded-[2rem] max-w-2xl w-full p-6 md:p-10 shadow-2xl border-4 border-emerald-100 my-auto">
+            <div className="flex items-center justify-between pb-6 border-b-2 border-stone-100 mb-6">
+              <div>
+                <h3 className="font-extrabold text-stone-900 text-3xl mb-1">📝 紀錄收支</h3>
+                <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-lg tracking-wider">
+                  {dateKey}
+                </span>
+              </div>
+              <button onClick={onClose} className="w-12 h-12 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold text-xl transition-colors">✕</button>
+            </div>
+
+            {/* 飲食區塊 */}
+            <div className="mb-8 bg-stone-50 p-6 rounded-3xl border border-stone-200">
+              <div className="flex items-center justify-between mb-4">
+                <span className="font-extrabold text-stone-800 text-lg flex items-center gap-2">
+                  <span className="text-2xl">🥗</span> 飲食攝取 
+                  <span className="text-rose-500 font-black ml-2 bg-rose-100 px-2 rounded-md">+{Math.round(totalIntake)}</span>
+                </span>
+                <button 
+                  type="button"
+                  onClick={() => setIsCustomFood(!isCustomFood)}
+                  className="text-sm font-bold text-emerald-600 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-xl transition-colors"
+                >
+                  {isCustomFood ? '📋 常用清單' : '✏️ 自訂餐點名稱'}
+                </button>
+              </div>
+
+              {!isCustomFood ? (
+                <div className="space-y-4 mb-2">
+                  <div className="flex flex-wrap gap-2">
+                    {foodCategories.map(cat => (
+                       <button
+                         key={cat}
+                         onClick={() => setSelectedCategory(cat)}
+                         className={`px-3 py-1.5 rounded-full text-xs md:text-sm font-bold border transition-colors ${
+                             selectedCategory === cat ? 'bg-stone-800 text-white border-stone-800 shadow-sm' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
+                         }`}
+                       >
+                         {cat}
+                       </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <select 
+                      className="flex-1 px-4 py-3 border-2 border-stone-200 rounded-2xl text-base font-bold text-stone-700 focus:outline-none focus:border-emerald-500 bg-white shadow-sm"
+                      onChange={(e) => {
+                        const item = filteredFoods.find(f => f.name === e.target.value);
+                        if (item) setSelectedDbFood(item);
+                      }}
+                      value={selectedDbFood.name}
+                    >
+                      {filteredFoods.map((item, idx) => (
+                        <option key={idx} value={item.name}>
+                          {item.name} ({item.kcal} kcal)
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <input 
+                        type="text" 
+                        value={foodQty}
+                        placeholder="份量"
+                        onChange={(e) => handleDecimalChange(e.target.value, setFoodQty)}
+                        className="w-24 px-4 py-3 border-2 border-stone-200 rounded-2xl text-base font-bold text-center focus:outline-none focus:border-emerald-500 bg-white shadow-sm"
+                      />
+                      <button 
+                        type="button" 
+                        onClick={handleAddFood}
+                        className="flex-1 sm:w-20 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-lg transition-colors shadow-md flex items-center justify-center"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-3 mb-2">
+                  <input 
+                    type="text" 
+                    value={customFoodName}
+                    placeholder="輸入餐點名稱 (系統自動估算熱量)"
+                    onChange={(e) => setCustomFoodName(e.target.value)}
+                    className="flex-1 px-4 py-3 border-2 border-stone-200 rounded-2xl text-base font-bold text-stone-700 focus:outline-none focus:border-emerald-500 bg-white shadow-sm"
+                  />
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <input 
+                      type="text" 
+                      value={foodQty}
+                      placeholder="份量"
+                      onChange={(e) => handleDecimalChange(e.target.value, setFoodQty)}
+                      className="w-24 px-4 py-3 border-2 border-stone-200 rounded-2xl text-base font-bold text-center focus:outline-none focus:border-emerald-500 bg-white shadow-sm"
+                    />
+                    <button 
+                      type="button" 
+                      onClick={handleAddFood}
+                      className="flex-1 sm:w-20 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-lg transition-colors shadow-md flex items-center justify-center"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <p className="text-[10px] text-stone-400 mb-3 ml-1 font-medium tracking-wide">💡 註：品項熱量參考自衛福部食藥署「台灣食品營養成分資料庫」</p>
+
+              <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-inner max-h-40 overflow-y-auto">
+                {foods.length === 0 ? (
+                  <p className="text-stone-400 text-center py-4 font-bold text-sm">尚未新增食物</p>
+                ) : (
+                  <div className="space-y-2">
+                      {foods.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center bg-stone-50 px-4 py-2.5 rounded-xl border border-stone-100 group hover:border-rose-200 transition-colors">
+                          <span className="font-bold text-stone-700">{item.name} <span className="text-stone-400 text-xs ml-2 font-normal">× {item.qty} {item.unit || '份'}</span></span>
+                          <div className="flex items-center gap-4">
+                            <span className="font-black text-rose-500 text-lg">{item.totalKcal}</span>
+                            <button onClick={() => handleRemoveFood(idx)} className="w-8 h-8 rounded-full bg-stone-200 hover:bg-rose-500 hover:text-white text-stone-500 flex items-center justify-center font-bold transition-colors">✕</button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 運動區塊 */}
+            <div className="mb-8 bg-stone-50 p-6 rounded-3xl border border-stone-200">
+              <span className="font-extrabold text-stone-800 text-lg flex items-center gap-2 mb-4">
+                <span className="text-2xl">🏃</span> 運動消耗
+                <span className="text-emerald-600 font-black ml-2 bg-emerald-100 px-2 rounded-md">-{Math.round(totalBurn)}</span>
+              </span>
+              
+              <div className="space-y-4 mb-2">
+                <div className="flex flex-wrap gap-2">
+                  {exCategories.map(cat => (
+                     <button
+                       key={cat}
+                       onClick={() => setSelectedExCategory(cat)}
+                       className={`px-3 py-1.5 rounded-full text-xs md:text-sm font-bold border transition-colors ${
+                           selectedExCategory === cat ? 'bg-stone-800 text-white border-stone-800 shadow-sm' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
+                       }`}
+                     >
+                       {cat}
+                     </button>
+                  ))}
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <select 
+                    className="flex-1 px-4 py-3 border-2 border-stone-200 rounded-2xl text-base font-bold text-stone-700 focus:outline-none focus:border-emerald-500 bg-white shadow-sm"
+                    onChange={(e) => {
+                      const item = filteredExercises.find(m => m.name === e.target.value);
+                      if (item) setSelectedExercise(item);
+                    }}
+                    value={selectedExercise.name}
+                  >
+                    {filteredExercises.map((item, idx) => (
+                      <option key={idx} value={item.name}>
+                        {item.name} (強度: {item.mets})
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        value={exerciseMinutes}
+                        placeholder="分鐘"
+                        onChange={(e) => handleIntegerChange(e.target.value, setExerciseMinutes)}
+                        className="w-24 px-4 py-3 border-2 border-stone-200 rounded-2xl text-base font-bold text-center focus:outline-none focus:border-emerald-500 bg-white shadow-sm pr-8"
+                      />
+                      <span className="absolute right-3 top-3.5 text-sm font-bold text-stone-400">m</span>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={handleAddExercise}
+                      className="flex-1 sm:w-20 bg-stone-800 hover:bg-black text-white rounded-2xl font-black text-lg transition-colors shadow-md flex items-center justify-center"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[10px] text-stone-400 mb-3 ml-1 font-medium tracking-wide">💡 註：消耗熱量依據國際通用的 代謝當量 (METs) 搭配您的體重計算</p>
+
+              <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-inner max-h-32 overflow-y-auto">
+                {exercises.length === 0 ? (
+                  <p className="text-stone-400 text-center py-4 font-bold text-sm">尚未新增運動 (可略過)</p>
+                ) : (
+                  <div className="space-y-2">
+                      {exercises.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center bg-emerald-50 px-4 py-2.5 rounded-xl border border-emerald-100 group hover:border-rose-200 transition-colors">
+                          <span className="font-bold text-emerald-900">{item.name} <span className="text-emerald-600/70 text-xs ml-2 font-normal">{item.minutes} min</span></span>
+                          <div className="flex items-center gap-4">
+                            <span className="font-black text-emerald-600 text-lg">-{item.burnKcal}</span>
+                            <button onClick={() => handleRemoveExercise(idx)} className="w-8 h-8 rounded-full bg-emerald-200/50 hover:bg-rose-500 hover:text-white text-emerald-700 flex items-center justify-center font-bold transition-colors">✕</button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 即時試算儀表列 */}
+            {warningMsg && (
+              <div className={`mb-3 px-4 py-3 rounded-xl text-xs font-bold shadow-inner border ${warningMsg.type === 'deficit' ? 'bg-orange-100 text-orange-800 border-orange-300' : 'bg-rose-100 text-rose-800 border-rose-300'}`}>
+                  {warningMsg.text}
+              </div>
+            )}
+            
+            <div className={`p-6 rounded-[2rem] mb-8 flex flex-col md:flex-row justify-between items-center gap-4 border-2 transition-colors ${deficit >= 0 ? 'bg-brand-light border-brand-mint shadow-lg shadow-brand-mint/20' : 'bg-rose-50 border-rose-200 shadow-lg shadow-rose-200/50'}`}>
+              <div className="text-sm font-black text-stone-600 bg-white/50 px-4 py-2 rounded-xl backdrop-blur-sm border border-stone-200/50">
+                {baseline} <span className="text-xs text-stone-400 mx-1">基</span> + 
+                {Math.round(totalBurn)} <span className="text-xs text-stone-400 mx-1">動</span> - 
+                <span className="text-rose-500 ml-1">{Math.round(totalIntake)}</span> <span className="text-xs text-rose-300 mx-1">食</span>
+              </div>
+              <div className="flex flex-col items-center md:items-end">
+                <span className="text-xs font-bold text-stone-500 uppercase tracking-widest mb-1">Total Result</span>
+                <div className="flex items-baseline gap-1">
+                    <span className={`text-5xl font-black tracking-tighter ${deficit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {deficit >= 0 ? '-' : '+'}{Math.abs(deficit)}
+                    </span>
+                    <span className="font-bold text-stone-400">kcal</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 儲存按鈕 */}
+            <div className="flex gap-4">
+              <button 
+                type="button" 
+                onClick={onClose}
+                className="w-1/3 py-4 rounded-2xl border-2 border-stone-200 text-stone-500 hover:bg-stone-50 text-lg font-bold transition-colors"
+              >
+                取消
+              </button>
+              <button 
+                type="button" 
+                onClick={() => onSave(foods, exercises)}
+                className="w-2/3 py-4 rounded-2xl bg-stone-800 hover:bg-black text-white text-xl font-bold shadow-xl shadow-stone-800/20 transition-transform hover:-translate-y-1 flex items-center justify-center gap-2"
+              >
+                💾 儲存今日紀錄
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- 12. 更換大頭貼 Modal ---
+    function AvatarEditModal({ currentProfile, onClose, onSave }) {
+        const [avatarType, setAvatarType] = useState(
+            (currentProfile.avatar && currentProfile.avatar.startsWith('data:image')) ? 'custom' : (currentProfile.avatar || 'sprout_1')
+        );
+        const [avatarImage, setAvatarImage] = useState(
+             (currentProfile.avatar && currentProfile.avatar.startsWith('data:image')) ? currentProfile.avatar : null
+        );
+        const fileInputRef = useRef(null);
+
+        const handleImageUpload = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setAvatarImage(reader.result);
+                    setAvatarType('custom');
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        const handleSave = () => {
+            let finalAvatar = avatarType;
+            if (avatarType === 'custom' && avatarImage) {
+                finalAvatar = avatarImage;
+            } else if (avatarType === 'custom' && !avatarImage) {
+                finalAvatar = 'sprout_1';
+            }
+            onSave({ ...currentProfile, avatar: finalAvatar });
+        };
+
+        return (
+            <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+                <div className="bg-white rounded-[2rem] max-w-sm w-full p-8 text-center shadow-2xl border-4 border-emerald-100">
+                    <h3 className="text-2xl font-black text-stone-800 mb-6">更換大頭貼</h3>
+                    
+                    <div className="w-32 h-32 mx-auto rounded-full border-4 border-emerald-400 overflow-hidden bg-emerald-50 flex items-center justify-center mb-6 shadow-xl relative group">
+                        {avatarType === 'custom' && avatarImage ? (
+                            <img src={avatarImage} alt="Custom Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="text-6xl">{AVATAR_OPTIONS.find(a => a.id === avatarType)?.icon || '🌱'}</span>
+                        )}
+                    </div>
+
+                    <div className="flex gap-3 mb-6 flex-wrap justify-center">
+                        {AVATAR_OPTIONS.map(opt => (
+                            <button
+                                key={opt.id}
+                                onClick={() => setAvatarType(opt.id)}
+                                className={`w-14 h-14 rounded-full text-2xl border-2 flex items-center justify-center transition-all ${
+                                    avatarType === opt.id ? 'border-emerald-500 bg-emerald-100 scale-110 shadow-md' : 'border-stone-200 bg-stone-50 hover:bg-stone-100'
+                                }`}
+                            >
+                                {opt.icon}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="mb-8">
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            ref={fileInputRef}
+                            onChange={handleImageUpload}
+                            className="hidden" 
+                        />
+                        <button 
+                            onClick={() => fileInputRef.current.click()}
+                            className="w-full py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-xl border border-stone-300 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <span>📸 上傳自訂照片</span>
+                        </button>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button onClick={onClose} className="w-1/2 py-3 border-2 border-stone-200 text-stone-600 rounded-xl font-bold hover:bg-stone-50 transition-colors">
+                        取消
+                      </button>
+                      <button onClick={handleSave} className="w-1/2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg transition-colors">
+                        確定更換
+                      </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // --- 13. 編輯個人資料 Modal ---
+    function ProfileEditModal({ initialProfile, onClose, onSave }) {
+      const [username, setUsername] = useState(initialProfile.username);
+      const [gender, setGender] = useState(initialProfile.gender);
+      const [birthday, setBirthday] = useState(initialProfile.birthday);
+      const [height, setHeight] = useState(String(initialProfile.height));
+      const [weight, setWeight] = useState(String(initialProfile.weight));
+      const [activity, setActivity] = useState(initialProfile.activity);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        const age = calcAge(birthday);
+        const bmr = calcBMR(gender, weight, height, age);
+        const actObj = ACTIVITY_LEVELS.find(a => a.id === activity) || ACTIVITY_LEVELS[0];
+        const baseline = calcBaseline(bmr, actObj.factor);
+
+        onSave({
+          ...initialProfile,
+          username: username.trim().slice(0, 10) || '綠寶好友',
+          gender,
+          birthday,
+          age,
+          height: parseFloat(height) || 165,
+          weight: parseFloat(weight) || 60,
+          activity,
+          activityFactor: actObj.factor,
+          bmr,
+          baseline
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto py-10">
+          <div className="bg-white rounded-[2rem] max-w-lg w-full p-8 md:p-10 shadow-2xl border-2 border-stone-100 my-auto">
+            <div className="flex items-center justify-between pb-6 border-b-2 border-stone-100 mb-8">
+              <h3 className="font-extrabold text-stone-900 text-2xl flex items-center gap-2">⚙️ 編輯設定</h3>
+              <button onClick={onClose} className="w-10 h-10 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold text-lg transition-colors">✕</button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="bg-stone-50 p-4 rounded-2xl">
+                <label className="block text-sm font-bold text-stone-600 mb-2">暱稱 (最多10字)</label>
+                <input 
+                  type="text" 
+                  maxLength={10}
+                  value={username} 
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl text-lg font-bold focus:outline-none focus:border-emerald-500 bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-stone-50 p-4 rounded-2xl">
+                  <label className="block text-sm font-bold text-stone-600 mb-2">生理性別</label>
+                  <select 
+                    value={gender} 
+                    onChange={(e) => setGender(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl text-lg font-bold focus:outline-none focus:border-emerald-500 bg-white"
+                  >
+                    <option value="female">🙋‍♀️ 女生</option>
+                    <option value="male">🙋‍♂️ 男生</option>
+                  </select>
+                </div>
+                <div className="bg-stone-50 p-4 rounded-2xl">
+                  <label className="block text-sm font-bold text-stone-600 mb-2">出生年月日</label>
+                  <input 
+                    type="date" 
+                    value={birthday} 
+                    onChange={(e) => setBirthday(e.target.value)}
+                    className="w-full px-3 py-3 border-2 border-stone-200 rounded-xl text-base font-bold focus:outline-none focus:border-emerald-500 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-stone-50 p-4 rounded-2xl">
+                  <label className="block text-sm font-bold text-stone-600 mb-2">身高 (cm)</label>
+                  <input 
+                    type="number" 
+                    value={height} 
+                    onChange={(e) => setHeight(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl text-lg font-bold focus:outline-none focus:border-emerald-500 bg-white"
+                  />
+                </div>
+                <div className="bg-stone-50 p-4 rounded-2xl">
+                  <label className="block text-sm font-bold text-stone-600 mb-2">體重 (kg)</label>
+                  <input 
+                    type="number" 
+                    value={weight} 
+                    onChange={(e) => setWeight(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl text-lg font-bold focus:outline-none focus:border-emerald-500 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-stone-50 p-4 rounded-2xl">
+                <label className="block text-sm font-bold text-stone-600 mb-2">日常活動型態</label>
+                <select 
+                  value={activity} 
+                  onChange={(e) => setActivity(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl text-base font-bold focus:outline-none focus:border-emerald-500 bg-white"
+                >
+                  {ACTIVITY_LEVELS.map(a => (
+                    <option key={a.id} value={a.id}>{a.emoji} {a.label} ({a.desc})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t-2 border-stone-100">
+                <button 
+                  type="button" 
+                  onClick={onClose} 
+                  className="w-1/3 py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-lg font-bold hover:bg-stone-50 transition-colors"
+                >
+                  取消
+                </button>
+                <button 
+                  type="submit" 
+                  className="w-2/3 py-4 bg-stone-800 hover:bg-black text-white rounded-2xl text-lg font-bold shadow-xl transition-colors"
+                >
+                  更新設定
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // --- 14. 重新出生孟婆湯確認視窗 ---
+    function RebirthConfirmModal({ onClose, onConfirm }) {
+      return (
+        <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-stone-900 rounded-[2rem] max-w-sm w-full p-8 text-center shadow-2xl border border-stone-700">
+            <div className="w-24 h-24 bg-stone-800 text-white border-2 border-stone-700 rounded-full flex items-center justify-center mx-auto mb-6 text-5xl shadow-inner">
+              🍵
+            </div>
+            <h3 className="text-2xl font-black text-white mb-3">喝下孟婆湯？</h3>
+            <p className="text-sm text-stone-400 leading-relaxed mb-8 font-medium">
+              紀錄的心血將化為烏有。<br/>過去的點滴將被徹底遺忘，<br/>確定要開啟全新的人生旅程嗎？
+            </p>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={onConfirm}
+                className="w-full py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-lg font-bold transition-all shadow-lg shadow-rose-900/50"
+              >
+                忘記一切，重新出生
+              </button>
+              <button 
+                onClick={onClose}
+                className="w-full py-3 text-stone-400 hover:text-white hover:bg-stone-800 rounded-xl text-sm font-bold transition-colors"
+              >
+                繼續前世記憶 (取消)
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- 15. 單日刪除確認視窗 ---
+    function DeleteConfirmModal({ dateKey, onClose, onConfirm }) {
+      return (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[2rem] max-w-sm w-full p-8 text-center shadow-2xl border-4 border-rose-100">
+            <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-inner border border-rose-100">
+              🗑️
+            </div>
+            <h3 className="text-2xl font-black text-stone-900 mb-2">確定刪除？</h3>
+            <p className="text-sm text-stone-500 mb-8 font-medium">
+              刪除後，<strong className="text-rose-600">{dateKey}</strong> 的紀錄將永久移除，日期變回未填寫狀態。
+            </p>
+            <div className="flex gap-3">
+              <button onClick={onClose} className="w-1/2 py-4 border-2 border-stone-200 hover:bg-stone-50 text-stone-600 rounded-2xl text-base font-bold transition-colors">
+                取消
+              </button>
+              <button onClick={onConfirm} className="w-1/2 py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl text-base font-bold shadow-lg shadow-rose-200 transition-colors">
+                確定刪除
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- 16. 公版 Error Dialog ---
+    function GlobalErrorModal({ message }) {
+      return (
+        <div className="fixed inset-0 bg-stone-900/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[2rem] max-w-sm w-full p-8 text-center shadow-2xl border-4 border-amber-200">
+            <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl border border-amber-100 shadow-inner">
+              🩹
+            </div>
+            <h3 className="text-2xl font-black text-stone-900 mb-3">哎呀！遇到小阻礙</h3>
+            <p className="text-sm text-stone-600 mb-8 leading-relaxed font-medium bg-amber-50 p-4 rounded-xl">
+              {message || "系統發生未預期的狀況，請點擊下方按鈕重新整理嘗試。"}
+            </p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-4 bg-stone-800 hover:bg-black text-white rounded-2xl text-lg font-bold shadow-xl transition-colors"
+            >
+              重新整理並重試 🔄
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 啟動 React
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
