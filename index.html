@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>綠寶算起來 - 您的熱量小幫手 v6</title>
+  <title>綠寶算起來 - 您的熱量小幫手 v7</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -85,8 +85,8 @@
 
     // --- 1. 常數與資料庫 ---
     const STORAGE_KEYS = {
-      PROFILE: 'calogreen_profile_v6',
-      RECORDS: 'calogreen_records_v6',
+      PROFILE: 'calogreen_profile_v7',
+      RECORDS: 'calogreen_records_v7',
     };
 
     // 鼓勵風格的標語庫核心句子
@@ -337,7 +337,7 @@
         return null;
     }
 
-    // --- 3. 漂浮並彈跳的全螢幕背景 Canvas 元件 (密度增加3倍，全螢幕邊界碰撞彈回) ---
+    // --- 3. 漂浮並彈跳的全螢幕背景 Canvas 元件 ---
     function BouncingBackgroundCanvas() {
         const canvasRef = useRef(null);
 
@@ -354,14 +354,12 @@
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
 
-            // 種類更豐富的花苗草木果實 icon
             const iconList = [
                 '🌱', '🌿', '🍀', '🌻', '🌸', '🌼', '🍃', '🌷', '🍄', '🍁', '🍂', 
                 '🌹', '🌾', '🌺', '🌵', '🌴', '🌲', '🌳', '🪴', '🎋', '🍇', '🍓', 
                 '🍎', '🍋', '🥑', '🥦', '🌽', '🥕', '🍏', '🫐', '🍒', '🥝'
             ];
 
-            // 增加至 85 個左右（密度增加約 3 倍）
             const particlesCount = 85;
             const particles = [];
 
@@ -369,13 +367,13 @@
                 particles.push({
                     x: Math.random() * canvas.width,
                     y: Math.random() * canvas.height,
-                    vx: (Math.random() - 0.5) * 1.6, // 飄動速度 X
-                    vy: (Math.random() - 0.5) * 1.6, // 飄動速度 Y
-                    size: 20 + Math.random() * 26,   // 大小
+                    vx: (Math.random() - 0.5) * 1.6,
+                    vy: (Math.random() - 0.5) * 1.6,
+                    size: 20 + Math.random() * 26,
                     angle: Math.random() * Math.PI * 2,
-                    vAngle: (Math.random() - 0.5) * 0.025, // 旋轉角速度
+                    vAngle: (Math.random() - 0.5) * 0.025,
                     icon: iconList[Math.floor(Math.random() * iconList.length)],
-                    opacity: 0.12 + Math.random() * 0.18 // 柔和透明度
+                    opacity: 0.12 + Math.random() * 0.18
                 });
             }
 
@@ -388,7 +386,6 @@
                     p.y += p.vy;
                     p.angle += p.vAngle;
 
-                    // 螢幕邊界碰撞彈回效果 (Bounce off walls)
                     if (p.x <= 15) {
                         p.x = 15;
                         p.vx = -p.vx;
@@ -405,7 +402,6 @@
                         p.vy = -p.vy;
                     }
 
-                    // 繪製旋轉 icon
                     ctx.save();
                     ctx.globalAlpha = p.opacity;
                     ctx.font = `${p.size}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
@@ -455,8 +451,8 @@
 
       useEffect(() => {
         try {
-          const savedProfile = localStorage.getItem(STORAGE_KEYS.PROFILE);
-          const savedRecords = localStorage.getItem(STORAGE_KEYS.RECORDS);
+          const savedProfile = localStorage.getItem(STORAGE_KEYS.PROFILE) || localStorage.getItem('calogreen_profile_v6');
+          const savedRecords = localStorage.getItem(STORAGE_KEYS.RECORDS) || localStorage.getItem('calogreen_records_v6');
           if (savedProfile) {
             setProfile(JSON.parse(savedProfile));
           } else {
@@ -552,6 +548,8 @@
         try {
           localStorage.removeItem(STORAGE_KEYS.PROFILE);
           localStorage.removeItem(STORAGE_KEYS.RECORDS);
+          localStorage.removeItem('calogreen_profile_v6');
+          localStorage.removeItem('calogreen_records_v6');
           setProfile(null);
           setRecords({});
           setIsRebirthModalOpen(false);
@@ -584,24 +582,23 @@
 
       return (
         <div className="bg-gradient-to-br from-[#dcfce7] via-[#f0fdf4] to-[#d1fae5] min-h-screen relative bg-leaf-pattern pb-24">
-          {/* 全螢幕 85+ 顆隨機漂浮且撞牆彈回的背景 Canvas */}
           <BouncingBackgroundCanvas />
 
-          <div className="max-w-5xl mx-auto px-4 py-6 md:py-8 relative z-10">
-            {/* 頂部 Header (右上角只保留編輯個人資料) */}
+          <div className="max-w-5xl mx-auto px-4 py-5 md:py-8 relative z-10">
+            {/* 頂部 Header */}
             <Header onOpenProfile={() => setIsProfileModalOpen(true)} />
 
             {/* 心情小語獨立區塊 (帶名字對話感) */}
             <SloganBanner username={profile.username} />
 
-            {/* 區塊一：個人檔案摘要卡片 (含下方隨機幽默稱讚) */}
+            {/* 區塊一：個人檔案摘要卡片 (v7：無 emoji、標籤換行、手機排版優化) */}
             <ProfileSummaryCard 
               profile={profile} 
               onEdit={() => setIsProfileModalOpen(true)}
               onOpenAvatarMenu={() => setIsAvatarMenuOpen(true)}
             />
 
-            {/* 區塊二：月曆互動區 */}
+            {/* 區塊二：月曆互動區 (v7：僅顏色框框，不顯示數字與其他資訊) */}
             <CalendarView 
               profile={profile}
               records={records}
@@ -630,7 +627,7 @@
               />
             )}
 
-            {/* 填寫 / 編輯飲食運動的 Dialog */}
+            {/* 填寫 / 編輯飲食運動的 Dialog (v7：飲食攝取 title 縮小、改名「其它餐點」) */}
             {isRecordModalOpen && activeDate && (
               <RecordModal 
                 dateKey={activeDate}
@@ -683,20 +680,18 @@
             )}
 
             {/* 主頁下方資訊欄：左下角重新出生，右下角免責聲明 */}
-            <div className="mt-12 flex flex-col md:flex-row items-center justify-between gap-4">
-              {/* 「重新出生」移至左下角，防呆不誤觸 */}
+            <div className="mt-10 sm:mt-12 flex flex-col sm:flex-row items-center justify-between gap-4">
               <button 
                 onClick={() => setIsRebirthModalOpen(true)} 
                 title="重新出生 (清除所有資料)"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/75 hover:bg-rose-50 border border-stone-200/80 hover:border-rose-300 text-stone-500 hover:text-rose-600 shadow-sm backdrop-blur-md transition-all group cursor-pointer text-xs md:text-sm font-bold"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/75 hover:bg-rose-50 border border-stone-200/80 hover:border-rose-300 text-stone-500 hover:text-rose-600 shadow-xs backdrop-blur-md transition-all group cursor-pointer text-xs sm:text-sm font-bold"
               >
                 <span className="text-xl group-hover:scale-125 transition-transform">👶</span>
                 <span>重新出生</span>
               </button>
 
-              {/* 右下角營養師免責聲明備註 */}
-              <div className="text-center md:text-right">
-                <span className="inline-block bg-white/80 backdrop-blur-sm border border-emerald-200/60 px-4 py-2 rounded-2xl text-xs text-stone-500 font-bold shadow-sm">
+              <div className="text-center sm:text-right">
+                <span className="inline-block bg-white/80 backdrop-blur-sm border border-emerald-200/60 px-4 py-2 rounded-2xl text-[11px] sm:text-xs text-stone-500 font-bold shadow-xs">
                   💡 本小工具僅供試算參考，不代表真正準確的數值，如有問題請諮詢專業營養師
                 </span>
               </div>
@@ -710,21 +705,21 @@
     function TransitionLoadingScreen({ username }) {
       return (
         <div className="fixed inset-0 bg-gradient-to-b from-[#86efac] to-[#22c55e] flex flex-col items-center justify-center z-50">
-          <div className="text-center relative">
-             <div className="w-40 h-40 mx-auto relative">
+          <div className="text-center relative px-4">
+             <div className="w-36 h-36 sm:w-40 sm:h-40 mx-auto relative">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-8xl animate-drop-grow">
+                  <div className="text-7xl sm:text-8xl animate-drop-grow">
                     🌱
                   </div>
                 </div>
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 animate-[dropAndGrow_3s_infinite_reverse]">
-                   <div className="text-6xl opacity-50">💧</div>
+                   <div className="text-5xl sm:text-6xl opacity-50">💧</div>
                 </div>
              </div>
-             <h2 className="text-3xl font-bold text-white mt-8 tracking-wider">{username || '新朋友'}，準備出生中...</h2>
-             <p className="text-emerald-50 mt-4 text-lg font-medium">為您計算專屬代謝基準，請稍候片刻 🌿</p>
+             <h2 className="text-2xl sm:text-3xl font-bold text-white mt-8 tracking-wider">{username || '新朋友'}，準備出生中...</h2>
+             <p className="text-emerald-50 mt-3 text-base sm:text-lg font-medium">為您計算專屬代謝基準，請稍候片刻 🌿</p>
              
-             <div className="w-64 h-3 bg-black/20 rounded-full mx-auto mt-8 overflow-hidden">
+             <div className="w-56 sm:w-64 h-3 bg-black/20 rounded-full mx-auto mt-6 overflow-hidden">
                 <div className="h-full bg-white rounded-full animate-[pulse_1.5s_ease-in-out_infinite]" style={{ width: '70%' }}></div>
              </div>
           </div>
@@ -732,7 +727,7 @@
       );
     }
 
-    // --- 5. 歡迎頁與漸進式引導 Flow (生動旋轉淡入淡出、左側滑入標題、跳過在右下角) ---
+    // --- 5. 歡迎頁與漸進式引導 Flow ---
     function OnboardingFlow({ onComplete, skipSplashDirectly }) {
       const [inSplash, setInSplash] = useState(!skipSplashDirectly);
       const [splashStage, setSplashStage] = useState(0);
@@ -749,7 +744,6 @@
       const [avatarImage, setAvatarImage] = useState(null);
       const fileInputRef = useRef(null);
 
-      // 動畫節奏控制
       useEffect(() => {
         if (!skipSplashDirectly && inSplash) {
           const t1 = setTimeout(() => setSplashStage(1), 1200);
@@ -804,24 +798,23 @@
       if (inSplash) {
         return (
           <div className="fixed inset-0 bg-gradient-to-br from-[#a7f3d0] via-[#86efac] to-[#22c55e] flex flex-col items-center justify-center p-6 z-50 overflow-hidden">
-            <div className="text-center relative">
-              {/* 生動的圖示動畫：旋轉、縮放與淡入淡出 */}
-              <div className="w-60 h-60 mx-auto mb-8 flex items-center justify-center relative">
-                 <div className={`absolute text-9xl transition-all duration-1000 ease-in-out ${
+            <div className="text-center relative px-4">
+              <div className="w-52 h-52 sm:w-60 sm:h-60 mx-auto mb-6 sm:mb-8 flex items-center justify-center relative">
+                 <div className={`absolute text-8xl sm:text-9xl transition-all duration-1000 ease-in-out ${
                     splashStage === 0 
                       ? 'opacity-100 scale-100 rotate-0' 
                       : 'opacity-0 scale-50 -rotate-90'
                  }`}>
                     👶
                  </div>
-                 <div className={`absolute text-9xl transition-all duration-1000 ease-in-out ${
+                 <div className={`absolute text-8xl sm:text-9xl transition-all duration-1000 ease-in-out ${
                     splashStage === 1 
                       ? 'opacity-100 scale-125 rotate-180 animate-spin-slow' 
                       : 'opacity-0 scale-75 rotate-0'
                  }`}>
                     ✨
                  </div>
-                 <div className={`absolute text-9xl transition-all duration-1000 ease-in-out ${
+                 <div className={`absolute text-8xl sm:text-9xl transition-all duration-1000 ease-in-out ${
                     splashStage >= 2 
                       ? 'opacity-100 scale-110 rotate-0 animate-vivid-icon' 
                       : 'opacity-0 scale-50 rotate-90'
@@ -830,21 +823,19 @@
                  </div>
               </div>
 
-              {/* 文字標題從螢幕左邊滑入到中間 */}
               <div className="animate-slide-in-left">
-                <h1 className="text-5xl md:text-6xl font-black text-[#064e3b] tracking-wide mb-4 drop-shadow-md">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-[#064e3b] tracking-wide mb-3 drop-shadow-md">
                   綠寶算起來
                 </h1>
-                <p className="text-[#065f46] text-xl md:text-2xl font-bold tracking-widest drop-shadow-sm">
+                <p className="text-[#065f46] text-lg sm:text-xl md:text-2xl font-bold tracking-widest drop-shadow-sm">
                   您的熱量赤字隨身小幫手
                 </p>
               </div>
             </div>
             
-            {/* 略過動畫按鈕：固定在右下角 */}
             <button 
               onClick={() => setInSplash(false)}
-              className="fixed bottom-6 right-6 md:bottom-8 md:right-8 px-6 py-3 bg-white/40 hover:bg-white/70 text-[#064e3b] font-black rounded-full text-base transition-all shadow-lg backdrop-blur-md border border-white/60 cursor-pointer hover:scale-105 active:scale-95 z-50"
+              className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 px-5 py-2.5 sm:px-6 sm:py-3 bg-white/40 hover:bg-white/70 text-[#064e3b] font-black rounded-full text-sm sm:text-base transition-all shadow-lg backdrop-blur-md border border-white/60 cursor-pointer hover:scale-105 active:scale-95 z-50"
             >
               略過動畫 ➔
             </button>
@@ -854,14 +845,14 @@
 
       return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-brand-sand">
-          <div className="bg-white rounded-[2rem] shadow-2xl border-4 border-emerald-100 p-8 md:p-12 max-w-2xl w-full relative overflow-hidden">
+          <div className="bg-white rounded-[2rem] shadow-2xl border-4 border-emerald-100 p-6 sm:p-8 md:p-12 max-w-2xl w-full relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 -z-10"></div>
             
-            <div className="flex items-center justify-between mb-10">
-              <span className="text-sm font-bold text-emerald-800 bg-emerald-100 px-4 py-1.5 rounded-full border border-emerald-200">
+            <div className="flex items-center justify-between mb-8 sm:mb-10">
+              <span className="text-xs sm:text-sm font-bold text-emerald-800 bg-emerald-100 px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-full border border-emerald-200">
                 步驟 {step} / 6
               </span>
-              <div className="w-64 bg-stone-100 rounded-full h-3 overflow-hidden shadow-inner">
+              <div className="w-48 sm:w-64 bg-stone-100 rounded-full h-2.5 sm:h-3 overflow-hidden shadow-inner">
                 <div 
                   className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full transition-all duration-500 ease-out" 
                   style={{ width: `${(step / 6) * 100}%` }}
@@ -871,24 +862,24 @@
 
             {step === 1 && (
               <div className="animate-fade-in">
-                <h2 className="text-3xl font-extrabold text-stone-800 mb-3">嗨！該怎麼稱呼你呢？</h2>
-                <p className="text-base text-stone-500 mb-8">讓綠寶為你量身打造專屬的健康旅程（支援最多 10 個字元）</p>
-                <div className="relative mb-10">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-800 mb-2 sm:mb-3">嗨！該怎麼稱呼你呢？</h2>
+                <p className="text-sm sm:text-base text-stone-500 mb-6 sm:mb-8">讓綠寶為你量身打造專屬的健康旅程（支援最多 10 個字元）</p>
+                <div className="relative mb-8 sm:mb-10">
                   <input 
                     type="text" 
                     value={username}
                     maxLength={10}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="例如：小綠、健走大師" 
-                    className="w-full px-6 py-5 text-2xl border-2 border-emerald-200 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all bg-stone-50"
+                    className="w-full px-5 py-4 sm:px-6 sm:py-5 text-xl sm:text-2xl border-2 border-emerald-200 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all bg-stone-50 font-bold"
                   />
-                  <span className="absolute right-6 top-6 text-sm font-bold text-stone-400">
+                  <span className="absolute right-5 top-5 text-xs sm:text-sm font-bold text-stone-400">
                     {username.length}/10
                   </span>
                 </div>
                 <button 
                   onClick={() => setStep(2)}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xl py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50 hover:-translate-y-1"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg sm:text-xl py-3.5 sm:py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50 hover:-translate-y-1"
                 >
                   下一步 ➔
                 </button>
@@ -897,147 +888,147 @@
 
             {step === 2 && (
               <div className="animate-fade-in">
-                <h2 className="text-3xl font-extrabold text-stone-800 mb-3">你的生理性別是？</h2>
-                <p className="text-base text-stone-500 mb-8">這有助於套用更精準的基礎代謝（BMR）科學公式</p>
-                <div className="grid grid-cols-2 gap-6 mb-10">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-800 mb-2 sm:mb-3">你的生理性別是？</h2>
+                <p className="text-sm sm:text-base text-stone-500 mb-6 sm:mb-8">這有助於套用更精準的基礎代謝（BMR）科學公式</p>
+                <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-10">
                   <button 
                     type="button"
                     onClick={() => setGender('male')}
-                    className={`p-8 rounded-3xl border-4 flex flex-col items-center justify-center transition-all ${
-                      gender === 'male' ? 'border-emerald-500 bg-emerald-50 shadow-md scale-105' : 'border-stone-100 bg-stone-50 text-stone-500 hover:border-emerald-200'
+                    className={`p-6 sm:p-8 rounded-3xl border-4 flex flex-col items-center justify-center transition-all ${
+                      gender === 'male' ? 'border-emerald-500 bg-emerald-50 shadow-md scale-102' : 'border-stone-100 bg-stone-50 text-stone-500 hover:border-emerald-200'
                     }`}
                   >
-                    <span className="text-6xl mb-4">🙋‍♂️</span>
-                    <span className="text-2xl font-bold text-stone-800">男生</span>
+                    <span className="text-5xl sm:text-6xl mb-3 sm:mb-4">🙋‍♂️</span>
+                    <span className="text-xl sm:text-2xl font-bold text-stone-800">男生</span>
                   </button>
                   <button 
                     type="button"
                     onClick={() => setGender('female')}
-                    className={`p-8 rounded-3xl border-4 flex flex-col items-center justify-center transition-all ${
-                      gender === 'female' ? 'border-emerald-500 bg-emerald-50 shadow-md scale-105' : 'border-stone-100 bg-stone-50 text-stone-500 hover:border-emerald-200'
+                    className={`p-6 sm:p-8 rounded-3xl border-4 flex flex-col items-center justify-center transition-all ${
+                      gender === 'female' ? 'border-emerald-500 bg-emerald-50 shadow-md scale-102' : 'border-stone-100 bg-stone-50 text-stone-500 hover:border-emerald-200'
                     }`}
                   >
-                    <span className="text-6xl mb-4">🙋‍♀️</span>
-                    <span className="text-2xl font-bold text-stone-800">女生</span>
+                    <span className="text-5xl sm:text-6xl mb-3 sm:mb-4">🙋‍♀️</span>
+                    <span className="text-xl sm:text-2xl font-bold text-stone-800">女生</span>
                   </button>
                 </div>
-                <div className="flex gap-4">
-                  <button onClick={() => setStep(1)} className="w-1/3 py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
-                  <button onClick={() => setStep(3)} className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xl py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50">下一步 ➔</button>
+                <div className="flex gap-3 sm:gap-4">
+                  <button onClick={() => setStep(1)} className="w-1/3 py-3.5 sm:py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-base sm:text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
+                  <button onClick={() => setStep(3)} className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base sm:text-xl py-3.5 sm:py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50">下一步 ➔</button>
                 </div>
               </div>
             )}
 
             {step === 3 && (
               <div className="animate-fade-in">
-                <h2 className="text-3xl font-extrabold text-stone-800 mb-3">你的出生年月日？</h2>
-                <p className="text-base text-stone-500 mb-8">透過日期選單，系統會自動幫您推算年齡</p>
-                <div className="mb-10">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-800 mb-2 sm:mb-3">你的出生年月日？</h2>
+                <p className="text-sm sm:text-base text-stone-500 mb-6 sm:mb-8">透過日期選單，系統會自動幫您推算年齡</p>
+                <div className="mb-8 sm:mb-10">
                   <input 
                     type="date" 
                     value={birthday}
                     onChange={(e) => setBirthday(e.target.value)}
-                    className="w-full px-6 py-5 text-2xl border-2 border-emerald-200 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all bg-stone-50 mb-6"
+                    className="w-full px-5 py-4 sm:px-6 sm:py-5 text-xl sm:text-2xl border-2 border-emerald-200 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all bg-stone-50 mb-5 font-bold"
                   />
-                  <div className="bg-gradient-to-r from-emerald-100 to-emerald-50 text-emerald-900 px-6 py-4 rounded-2xl flex items-center justify-between border border-emerald-200">
-                    <span className="text-lg font-bold">推算目前實歲：</span>
-                    <span className="text-3xl font-black text-emerald-700">{age} <span className="text-xl">歲</span></span>
+                  <div className="bg-gradient-to-r from-emerald-100 to-emerald-50 text-emerald-900 px-5 py-3.5 sm:px-6 sm:py-4 rounded-2xl flex items-center justify-between border border-emerald-200">
+                    <span className="text-base sm:text-lg font-bold">推算目前實歲：</span>
+                    <span className="text-2xl sm:text-3xl font-black text-emerald-700">{age} <span className="text-lg sm:text-xl">歲</span></span>
                   </div>
                 </div>
-                <div className="flex gap-4">
-                  <button onClick={() => setStep(2)} className="w-1/3 py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
-                  <button onClick={() => setStep(4)} className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xl py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50">下一步 ➔</button>
+                <div className="flex gap-3 sm:gap-4">
+                  <button onClick={() => setStep(2)} className="w-1/3 py-3.5 sm:py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-base sm:text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
+                  <button onClick={() => setStep(4)} className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base sm:text-xl py-3.5 sm:py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50">下一步 ➔</button>
                 </div>
               </div>
             )}
 
             {step === 4 && (
               <div className="animate-fade-in">
-                <h2 className="text-3xl font-extrabold text-stone-800 mb-3">你的身高與體重？</h2>
-                <p className="text-base text-stone-500 mb-8">身高與體重是計算基礎燃燒熱量的關鍵數值</p>
-                <div className="space-y-6 mb-10">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-800 mb-2 sm:mb-3">你的身高與體重？</h2>
+                <p className="text-sm sm:text-base text-stone-500 mb-6 sm:mb-8">身高與體重是計算基礎燃燒熱量的關鍵數值</p>
+                <div className="space-y-4 sm:space-y-6 mb-8 sm:mb-10">
                   <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200">
-                    <label className="block text-sm font-bold text-stone-600 mb-2">身高 (cm)</label>
+                    <label className="block text-xs sm:text-sm font-bold text-stone-600 mb-1.5">身高 (cm)</label>
                     <input 
                       type="number" 
                       value={height}
                       onChange={(e) => setHeight(e.target.value)}
-                      className="w-full px-4 py-3 text-2xl font-bold text-stone-800 bg-white border-2 border-emerald-100 rounded-xl focus:outline-none focus:border-emerald-500 transition-all" 
+                      className="w-full px-4 py-2.5 sm:py-3 text-xl sm:text-2xl font-bold text-stone-800 bg-white border-2 border-emerald-100 rounded-xl focus:outline-none focus:border-emerald-500 transition-all" 
                       placeholder="165"
                     />
                   </div>
                   <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200">
-                    <label className="block text-sm font-bold text-stone-600 mb-2">體重 (kg)</label>
+                    <label className="block text-xs sm:text-sm font-bold text-stone-600 mb-1.5">體重 (kg)</label>
                     <input 
                       type="number" 
                       value={weight}
                       onChange={(e) => setWeight(e.target.value)}
-                      className="w-full px-4 py-3 text-2xl font-bold text-stone-800 bg-white border-2 border-emerald-100 rounded-xl focus:outline-none focus:border-emerald-500 transition-all" 
+                      className="w-full px-4 py-2.5 sm:py-3 text-xl sm:text-2xl font-bold text-stone-800 bg-white border-2 border-emerald-100 rounded-xl focus:outline-none focus:border-emerald-500 transition-all" 
                       placeholder="58"
                     />
                   </div>
                 </div>
-                <div className="flex gap-4">
-                  <button onClick={() => setStep(3)} className="w-1/3 py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
-                  <button onClick={() => setStep(5)} className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xl py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50">下一步 ➔</button>
+                <div className="flex gap-3 sm:gap-4">
+                  <button onClick={() => setStep(3)} className="w-1/3 py-3.5 sm:py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-base sm:text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
+                  <button onClick={() => setStep(5)} className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base sm:text-xl py-3.5 sm:py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50">下一步 ➔</button>
                 </div>
               </div>
             )}
 
             {step === 5 && (
               <div className="animate-fade-in">
-                <h2 className="text-3xl font-extrabold text-stone-800 mb-3">平常的你是怎樣的生活習慣？</h2>
-                <p className="text-base text-stone-500 mb-6">選出最符合你日常動態的選項（多選一）</p>
-                <div className="grid grid-cols-2 gap-4 mb-8">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-800 mb-2 sm:mb-3">平常的你是怎樣的生活習慣？</h2>
+                <p className="text-sm sm:text-base text-stone-500 mb-5 sm:mb-6">選出最符合你日常動態的選項（多選一）</p>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
                   {ACTIVITY_LEVELS.map((item) => (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() => setActivityLevel(item.id)}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all flex flex-col justify-between h-full ${
+                      className={`p-3.5 sm:p-5 rounded-2xl border-2 text-left transition-all flex flex-col justify-between h-full ${
                         activityLevel === item.id 
-                          ? 'border-emerald-500 bg-emerald-50 ring-4 ring-emerald-100 shadow-md scale-105' 
+                          ? 'border-emerald-500 bg-emerald-50 ring-3 ring-emerald-100 shadow-md scale-102' 
                           : 'border-stone-200 bg-stone-50 hover:border-emerald-300'
                       }`}
                     >
-                      <span className="text-4xl mb-3">{item.emoji}</span>
-                      <div className="font-bold text-stone-800 text-lg mb-1">{item.label}</div>
-                      <div className="text-sm text-stone-500 leading-tight">{item.desc}</div>
+                      <span className="text-3xl sm:text-4xl mb-2 sm:mb-3">{item.emoji}</span>
+                      <div className="font-bold text-stone-800 text-base sm:text-lg mb-1">{item.label}</div>
+                      <div className="text-xs sm:text-sm text-stone-500 leading-tight">{item.desc}</div>
                     </button>
                   ))}
                 </div>
-                <div className="flex gap-4">
-                  <button onClick={() => setStep(4)} className="w-1/3 py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
-                  <button onClick={() => setStep(6)} className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xl py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50">最後一步 ➔</button>
+                <div className="flex gap-3 sm:gap-4">
+                  <button onClick={() => setStep(4)} className="w-1/3 py-3.5 sm:py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-base sm:text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
+                  <button onClick={() => setStep(6)} className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base sm:text-xl py-3.5 sm:py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200/50">最後一步 ➔</button>
                 </div>
               </div>
             )}
             
             {step === 6 && (
               <div className="animate-fade-in">
-                <h2 className="text-3xl font-extrabold text-stone-800 mb-3">選個代表你的大頭貼吧！</h2>
-                <p className="text-base text-stone-500 mb-8">選擇預設的小樹苗，或是上傳自己喜歡的照片</p>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-800 mb-2 sm:mb-3">選個代表你的大頭貼吧！</h2>
+                <p className="text-sm sm:text-base text-stone-500 mb-6 sm:mb-8">選擇預設的小樹苗，或是上傳自己喜歡的照片</p>
                 
-                <div className="flex flex-col items-center mb-10">
-                    <div className="w-32 h-32 rounded-full border-4 border-emerald-400 overflow-hidden bg-emerald-50 flex items-center justify-center mb-6 shadow-xl relative group">
+                <div className="flex flex-col items-center mb-8 sm:mb-10">
+                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-emerald-400 overflow-hidden bg-emerald-50 flex items-center justify-center mb-5 sm:mb-6 shadow-xl relative group">
                         {avatarType === 'custom' && avatarImage ? (
                             <img src={avatarImage} alt="Custom Avatar" className="w-full h-full object-cover" />
                         ) : (
-                            <span className="text-6xl">{AVATAR_OPTIONS.find(a => a.id === avatarType)?.icon || '🌱'}</span>
+                            <span className="text-5xl sm:text-6xl">{AVATAR_OPTIONS.find(a => a.id === avatarType)?.icon || '🌱'}</span>
                         )}
                         {avatarType === 'custom' && avatarImage && (
                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-white text-sm font-bold">已上傳</span>
+                                <span className="text-white text-xs sm:text-sm font-bold">已上傳</span>
                              </div>
                         )}
                     </div>
                     
-                    <div className="flex gap-4 mb-6 flex-wrap justify-center">
+                    <div className="flex gap-3 sm:gap-4 mb-5 sm:mb-6 flex-wrap justify-center">
                         {AVATAR_OPTIONS.map(opt => (
                             <button
                                 key={opt.id}
                                 onClick={() => setAvatarType(opt.id)}
-                                className={`w-16 h-16 rounded-full text-3xl border-2 flex items-center justify-center transition-all ${
+                                className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full text-2xl sm:text-3xl border-2 flex items-center justify-center transition-all ${
                                     avatarType === opt.id ? 'border-emerald-500 bg-emerald-100 scale-110 shadow-md' : 'border-stone-200 bg-stone-50 hover:bg-stone-100'
                                 }`}
                             >
@@ -1056,18 +1047,18 @@
                         />
                         <button 
                             onClick={() => fileInputRef.current.click()}
-                            className="px-6 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-full text-sm border border-stone-300 transition-colors flex items-center gap-2"
+                            className="px-5 py-2 sm:px-6 sm:py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-full text-xs sm:text-sm border border-stone-300 transition-colors flex items-center gap-2"
                         >
                             <span>📸 上傳自訂照片</span>
                         </button>
                     </div>
                 </div>
 
-                <div className="flex gap-4">
-                  <button onClick={() => setStep(5)} className="w-1/3 py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
+                <div className="flex gap-3 sm:gap-4">
+                  <button onClick={() => setStep(5)} className="w-1/3 py-3.5 sm:py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-base sm:text-xl font-bold hover:bg-stone-50 transition-colors">上一步</button>
                   <button 
                     onClick={handleFinish} 
-                    className="w-2/3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold text-xl py-4 rounded-2xl transition-all shadow-xl shadow-emerald-500/40 hover:-translate-y-1"
+                    className="w-2/3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold text-base sm:text-xl py-3.5 sm:py-4 rounded-2xl transition-all shadow-xl shadow-emerald-500/40 hover:-translate-y-1"
                   >
                     開啟綠寶生活 🌱
                   </button>
@@ -1079,34 +1070,33 @@
       );
     }
 
-    // --- 6. 頂部 Header (右上角只保留編輯個人資料) ---
+    // --- 6. 頂部 Header ---
     function Header({ onOpenProfile }) {
       return (
-        <header className="flex flex-row items-center justify-between bg-white/85 backdrop-blur-md px-5 md:px-7 py-4 rounded-3xl shadow-sm border border-emerald-100/60 mb-4 sticky top-4 z-40">
-          <div className="flex items-center gap-3">
-            <span className="p-2.5 bg-gradient-to-br from-emerald-100 to-emerald-200 text-emerald-800 rounded-2xl text-2xl shadow-inner">🌱</span>
+        <header className="flex flex-row items-center justify-between bg-white/85 backdrop-blur-md px-4 sm:px-6 py-3.5 sm:py-4 rounded-3xl shadow-sm border border-emerald-100/60 mb-4 sticky top-4 z-40">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <span className="p-2 sm:p-2.5 bg-gradient-to-br from-emerald-100 to-emerald-200 text-emerald-800 rounded-2xl text-xl sm:text-2xl shadow-inner">🌱</span>
             <div>
-              <h1 className="text-xl md:text-2xl font-extrabold text-emerald-950 tracking-tight">綠寶算起來</h1>
-              <p className="text-xs md:text-sm font-medium text-emerald-600">您的熱量赤字隨身小幫手</p>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-emerald-950 tracking-tight">綠寶算起來</h1>
+              <p className="text-[11px] sm:text-xs md:text-sm font-medium text-emerald-600">您的熱量赤字隨身小幫手</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-             {/* 編輯個人資料按鈕 */}
+          <div className="flex items-center gap-2">
              <button 
               onClick={onOpenProfile} 
               title="編輯個人資料"
-              className="px-4 py-2.5 rounded-2xl bg-emerald-50/90 hover:bg-emerald-100/90 border border-emerald-200/80 hover:border-emerald-300 text-emerald-800 flex items-center gap-2 transition-all cursor-pointer shadow-sm group"
+              className="px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl bg-emerald-50/90 hover:bg-emerald-100/90 border border-emerald-200/80 hover:border-emerald-300 text-emerald-800 flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-xs group"
              >
-              <span className="text-xl group-hover:rotate-45 transition-transform">⚙️</span>
-              <span className="text-xs md:text-sm font-bold text-emerald-800">編輯個人資料</span>
+              <span className="text-lg sm:text-xl group-hover:rotate-45 transition-transform">⚙️</span>
+              <span className="text-xs sm:text-sm font-bold text-emerald-800 whitespace-nowrap">編輯個人資料</span>
              </button>
           </div>
         </header>
       );
     }
 
-    // --- 7. Slogan Banner (前面加上對話感：例如「跟你說喔{名字}」) ---
+    // --- 7. Slogan Banner ---
     function SloganBanner({ username }) {
       const [displayQuote, setDisplayQuote] = useState('');
 
@@ -1118,16 +1108,16 @@
       }, [username]);
 
       return (
-         <div className="bg-white/75 backdrop-blur-sm border border-emerald-200/60 rounded-2xl px-6 py-3.5 mb-6 flex items-center justify-center shadow-sm relative overflow-hidden">
+         <div className="bg-white/75 backdrop-blur-sm border border-emerald-200/60 rounded-2xl px-5 py-3 sm:px-6 sm:py-3.5 mb-5 sm:mb-6 flex items-center justify-center shadow-xs relative overflow-hidden">
              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500"></div>
-             <span className="text-emerald-900 font-bold text-sm md:text-base tracking-wide text-center">
+             <span className="text-emerald-900 font-bold text-xs sm:text-sm md:text-base tracking-wide text-center">
                 💬 {displayQuote}
              </span>
          </div>
       );
     }
 
-    // --- 8. 區塊一：個人檔案卡片 (下方增加隨機幽默稱讚句) ---
+    // --- 8. 區塊一：個人檔案卡片 (v7：無 emoji、標籤換行、手機排版優化) ---
     function ProfileSummaryCard({ profile, onEdit, onOpenAvatarMenu }) {
       const actObj = ACTIVITY_LEVELS.find(a => a.id === profile.activity) || ACTIVITY_LEVELS[0];
       
@@ -1140,58 +1130,69 @@
           avatarContent = <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />;
       } else {
           const opt = AVATAR_OPTIONS.find(a => a.id === profile.avatar);
-          avatarContent = <span className="text-4xl">{opt ? opt.icon : '🌱'}</span>;
+          avatarContent = <span className="text-3xl sm:text-4xl">{opt ? opt.icon : '🌱'}</span>;
       }
 
       return (
-        <div className="bg-gradient-to-br from-emerald-500 via-[#1ea354] to-forest-700 text-white rounded-[2rem] p-6 md:p-8 shadow-xl shadow-emerald-900/10 mb-8 relative overflow-hidden border border-emerald-300/40">
+        <div className="bg-gradient-to-br from-emerald-500 via-[#1ea354] to-forest-700 text-white rounded-[2rem] p-5 sm:p-6 md:p-8 shadow-xl shadow-emerald-900/10 mb-6 sm:mb-8 relative overflow-hidden border border-emerald-300/40">
           <div className="absolute -top-10 -right-10 w-48 h-48 bg-white opacity-20 rounded-full blur-2xl pointer-events-none"></div>
           <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-emerald-900 opacity-30 rounded-full blur-3xl pointer-events-none"></div>
 
-          <div className="flex flex-col md:flex-row items-center md:items-center justify-between gap-8 relative z-10">
-            <div className="flex items-center gap-6">
-              <div className="relative group cursor-pointer" onClick={onOpenAvatarMenu} title="點擊更換大頭貼">
-                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-white/50 shadow-lg overflow-hidden bg-white/30 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+            <div className="flex items-center gap-4 sm:gap-6 w-full md:w-auto">
+              {/* 大頭貼 (帶小鉛筆編輯 Icon) */}
+              <div className="relative group cursor-pointer shrink-0" onClick={onOpenAvatarMenu} title="點擊更換大頭貼">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-white/50 shadow-lg overflow-hidden bg-white/30 flex items-center justify-center transition-transform group-hover:scale-105">
                       {avatarContent}
                   </div>
-                  <div className="absolute -top-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md border border-stone-200 text-emerald-700 text-sm z-10 transition-transform group-hover:scale-110">
+                  <div className="absolute -top-1 -right-1 w-6 h-6 sm:w-7 sm:h-7 bg-white rounded-full flex items-center justify-center shadow-md border border-stone-200 text-emerald-700 text-xs sm:text-sm z-10 transition-transform group-hover:scale-110">
                     ✏️
                   </div>
                   <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                     <span className="text-white text-xs font-bold tracking-widest uppercase">更換</span>
+                     <span className="text-white text-[10px] sm:text-xs font-bold tracking-widest uppercase">更換</span>
                   </div>
               </div>
               
-              <div>
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className="text-3xl font-extrabold tracking-tight drop-shadow-sm">{profile.username}</span>
-                  <span className="bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs px-3 py-1.5 rounded-full font-bold shadow-sm">
+              <div className="min-w-0 flex-1">
+                {/* 暱稱獨立一行 */}
+                <div className="mb-1">
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight drop-shadow-sm truncate">{profile.username}</h2>
+                </div>
+
+                {/* 性別、特質 tag 移到下一行顯示 */}
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2">
+                  <span className="bg-white/20 backdrop-blur-md border border-white/30 text-white text-[11px] sm:text-xs px-2.5 py-0.5 sm:py-1 rounded-full font-bold shadow-xs whitespace-nowrap">
                     {profile.gender === 'male' ? '男生' : '女生'} · {profile.age} 歲
                   </span>
-                  <span className="bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs px-3 py-1.5 rounded-full font-bold shadow-sm">
+                  <span className="bg-white/20 backdrop-blur-md border border-white/30 text-white text-[11px] sm:text-xs px-2.5 py-0.5 sm:py-1 rounded-full font-bold shadow-xs whitespace-nowrap">
                     {actObj.emoji} {actObj.label}
                   </span>
                 </div>
-                <p className="text-emerald-50 font-medium text-sm flex items-center gap-4 drop-shadow-sm mb-2">
-                  <span>📏 身高: <strong className="text-white text-base">{profile.height}</strong> cm</span>
-                  <span>⚖️ 體重: <strong className="text-white text-base">{profile.weight}</strong> kg</span>
+
+                {/* 身高、體重欄（移除 emoji） */}
+                <p className="text-emerald-50 font-medium text-xs sm:text-sm flex flex-wrap items-center gap-2 sm:gap-3 drop-shadow-sm mb-2.5">
+                  <span>身高 <strong className="text-white text-sm sm:text-base">{profile.height}</strong> cm</span>
+                  <span className="text-white/40">·</span>
+                  <span>體重 <strong className="text-white text-sm sm:text-base">{profile.weight}</strong> kg</span>
                 </p>
+
                 {/* 幽默稱讚句 */}
-                <div className="inline-block bg-black/15 backdrop-blur-sm border border-white/20 px-3.5 py-1.5 rounded-xl text-xs font-bold text-mint-100 shadow-inner">
+                <div className="inline-block bg-black/15 backdrop-blur-sm border border-white/20 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold text-mint-100 shadow-inner leading-relaxed">
                   ✨ {randomHumorPraise}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-6 bg-white/10 backdrop-blur-lg px-8 py-5 rounded-3xl border border-white/30 shadow-inner w-full md:w-auto justify-center">
+            {/* 代謝基準卡片 (手機版平均分佈) */}
+            <div className="flex items-center justify-around md:justify-center gap-4 sm:gap-6 bg-white/10 backdrop-blur-lg px-4 sm:px-8 py-3 sm:py-4 md:py-5 rounded-2xl md:rounded-3xl border border-white/30 shadow-inner w-full md:w-auto">
               <div className="text-center">
-                <div className="text-xs text-emerald-100 font-bold tracking-wider mb-1 uppercase">基礎代謝 BMR</div>
-                <div className="text-3xl font-black text-white tracking-tight drop-shadow-md">{profile.bmr} <span className="text-sm font-medium text-emerald-100">kcal</span></div>
+                <div className="text-[11px] sm:text-xs text-emerald-100 font-bold tracking-wider mb-0.5 uppercase">基礎代謝 BMR</div>
+                <div className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-md">{profile.bmr} <span className="text-xs font-medium text-emerald-100">kcal</span></div>
               </div>
-              <div className="w-px h-12 bg-white/30 rounded-full" />
+              <div className="w-px h-10 sm:h-12 bg-white/30 rounded-full" />
               <div className="text-center">
-                <div className="text-xs text-[#d1fae5] font-bold tracking-wider mb-1 uppercase">日常基準消耗</div>
-                <div className="text-4xl font-black text-[#d1fae5] tracking-tight drop-shadow-md">{profile.baseline} <span className="text-sm font-medium text-white">kcal</span></div>
+                <div className="text-[11px] sm:text-xs text-[#d1fae5] font-bold tracking-wider mb-0.5 uppercase">日常基準消耗</div>
+                <div className="text-2xl sm:text-3xl md:text-4xl font-black text-[#d1fae5] tracking-tight drop-shadow-md">{profile.baseline} <span className="text-xs font-medium text-white">kcal</span></div>
               </div>
             </div>
           </div>
@@ -1199,7 +1200,7 @@
       );
     }
 
-    // --- 9. 區塊二：互動式月曆 ---
+    // --- 9. 區塊二：互動式月曆 (v7：僅顏色框框，不顯示數字與其他資訊) ---
     function CalendarView({ profile, records, onSelectDate }) {
       const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -1248,39 +1249,40 @@
       const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
 
       return (
-        <div className="bg-white/85 backdrop-blur-md rounded-[2rem] p-6 md:p-8 shadow-lg shadow-emerald-900/5 border border-white">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-            <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-stone-100 shadow-sm">
+        <div className="bg-white/85 backdrop-blur-md rounded-[2rem] p-4 sm:p-6 md:p-8 shadow-lg shadow-emerald-900/5 border border-white">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div className="flex items-center gap-2 bg-white p-1 rounded-2xl border border-stone-100 shadow-sm">
               <button 
                 onClick={prevMonth} 
-                className="p-2 md:px-4 md:py-2 rounded-xl bg-stone-50 hover:bg-emerald-50 text-stone-700 font-bold transition shadow-sm border border-stone-100"
+                className="p-2 sm:px-3.5 sm:py-2 rounded-xl bg-stone-50 hover:bg-emerald-50 text-stone-700 font-bold transition shadow-2xs border border-stone-100 text-sm"
               >
                 ◀
               </button>
-              <h2 className="text-xl md:text-2xl font-black text-emerald-900 min-w-[160px] text-center tracking-wide">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-black text-emerald-900 min-w-[130px] sm:min-w-[160px] text-center tracking-wide">
                 {year} 年 {month + 1} 月
               </h2>
               <button 
                 onClick={nextMonth} 
-                className="p-2 md:px-4 md:py-2 rounded-xl bg-stone-50 hover:bg-emerald-50 text-stone-700 font-bold transition shadow-sm border border-stone-100"
+                className="p-2 sm:px-3.5 sm:py-2 rounded-xl bg-stone-50 hover:bg-emerald-50 text-stone-700 font-bold transition shadow-2xs border border-stone-100 text-sm"
               >
                 ▶
               </button>
             </div>
 
-            <div className="flex items-center gap-3 text-sm">
-              <span className="flex items-center gap-2 bg-white text-emerald-800 px-4 py-2 rounded-2xl font-bold border border-emerald-100 shadow-sm">
-                <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm"></span> 
+            <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+              <span className="flex items-center gap-1.5 sm:gap-2 bg-white text-emerald-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl font-bold border border-emerald-100 shadow-2xs">
+                <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 shadow-xs"></span> 
                 達標：{stats.successCount} 天
               </span>
-              <span className="flex items-center gap-2 bg-white text-rose-800 px-4 py-2 rounded-2xl font-bold border border-rose-100 shadow-sm">
-                <span className="w-3 h-3 rounded-full bg-rose-500 shadow-sm"></span> 
+              <span className="flex items-center gap-1.5 sm:gap-2 bg-white text-rose-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl font-bold border border-rose-100 shadow-2xs">
+                <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-rose-500 shadow-xs"></span> 
                 超標：{stats.failCount} 天
               </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2 mb-3 text-center text-sm font-black text-stone-400">
+          {/* 星期標頭 */}
+          <div className="grid grid-cols-7 gap-1.5 sm:gap-2 md:gap-3 mb-2 sm:mb-3 text-center text-xs sm:text-sm font-black text-stone-400">
             {weekdays.map((w, idx) => (
               <div key={idx} className={idx === 0 || idx === 6 ? 'text-rose-400' : 'text-emerald-700'}>
                 {w}
@@ -1288,22 +1290,23 @@
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-2 md:gap-3">
+          {/* 日期網格 (僅用顏色框框表示填表狀況，不再顯示卡路里數字與其他資訊) */}
+          <div className="grid grid-cols-7 gap-1.5 sm:gap-2 md:gap-3">
             {calendarCells.map((cell) => {
               if (cell.type === 'empty') {
-                return <div key={cell.key} className="h-24 md:h-28 rounded-2xl bg-transparent" />;
+                return <div key={cell.key} className="aspect-square sm:h-14 md:h-18 rounded-xl sm:rounded-2xl bg-transparent" />;
               }
 
               const hasRecord = !!cell.record && !!cell.record.summary;
               const isSuccess = hasRecord && cell.record.summary.isSuccess;
-              const deficit = hasRecord ? cell.record.summary.deficit : 0;
 
-              let bgStyle = "bg-white hover:bg-stone-50 text-stone-600 border border-dashed border-stone-200 shadow-sm";
+              // 樣式：未填灰框 / 達標綠框 / 超標橘紅框
+              let boxStyle = "bg-white/70 hover:bg-white text-stone-600 border-2 border-dashed border-stone-200 hover:border-emerald-300 shadow-2xs";
               if (hasRecord) {
                 if (isSuccess) {
-                  bgStyle = "bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 text-emerald-950 border-2 border-emerald-400 font-bold shadow-md transform hover:-translate-y-1";
+                  boxStyle = "bg-emerald-50/90 hover:bg-emerald-100 text-emerald-900 border-2 border-emerald-500 font-black shadow-xs ring-2 ring-emerald-200/50";
                 } else {
-                  bgStyle = "bg-gradient-to-br from-rose-50 to-orange-50 hover:from-rose-100 hover:to-orange-100 text-rose-950 border-2 border-rose-300 font-bold shadow-md transform hover:-translate-y-1";
+                  boxStyle = "bg-rose-50/90 hover:bg-rose-100 text-rose-900 border-2 border-rose-400 font-black shadow-xs ring-2 ring-rose-200/50";
                 }
               }
 
@@ -1311,31 +1314,12 @@
                 <button
                   key={cell.dateKey}
                   onClick={() => onSelectDate(cell.dateKey, hasRecord)}
-                  className={`h-24 md:h-28 rounded-2xl p-3 flex flex-col justify-between text-left transition-all duration-200 relative cursor-pointer group ${bgStyle}`}
+                  className={`aspect-square sm:h-14 md:h-18 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-200 relative cursor-pointer active:scale-95 hover:scale-105 ${boxStyle}`}
+                  title={hasRecord ? (isSuccess ? `${cell.dateKey} (達標)` : `${cell.dateKey} (超標)`) : `${cell.dateKey} (未記錄)`}
                 >
-                  <div className="flex items-start justify-between w-full">
-                    <span className={`text-lg md:text-xl font-black ${hasRecord ? '' : 'text-stone-400'}`}>{cell.day}</span>
-                    {hasRecord && (
-                      <span className="text-lg bg-white/60 rounded-full w-6 h-6 flex items-center justify-center shadow-sm">
-                        {isSuccess ? '🌱' : '⚠️'}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="text-right w-full">
-                    {hasRecord ? (
-                      <div>
-                        <div className={`font-black text-lg md:text-xl tracking-tighter ${isSuccess ? 'text-emerald-700' : 'text-rose-600'}`}>
-                           {isSuccess ? '-' : '+'}{Math.abs(deficit)}
-                        </div>
-                        <div className="text-[10px] font-bold opacity-60 uppercase tracking-wider mt-0.5">kcal</div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity ml-auto">
-                        <span className="font-bold text-lg leading-none">+</span>
-                      </div>
-                    )}
-                  </div>
+                  <span className="text-sm sm:text-base md:text-xl font-bold tracking-tight">
+                    {cell.day}
+                  </span>
                 </button>
               );
             })}
@@ -1358,36 +1342,36 @@
 
       return (
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-[2rem] max-w-md w-full p-8 shadow-2xl border-2 border-stone-100 animate-[pulse-slow_3s_ease-in-out_infinite] hover:animate-none transition-all transform scale-100">
+          <div className="bg-white rounded-[2rem] max-w-md w-full p-6 sm:p-8 shadow-2xl border-2 border-stone-100 animate-[pulse-slow_3s_ease-in-out_infinite] hover:animate-none transition-all transform scale-100">
             <div className="flex items-center justify-between pb-4 border-b-2 border-stone-100 mb-4">
               <div className="flex items-center gap-3">
-                <span className="text-3xl bg-stone-50 p-2 rounded-2xl shadow-inner">{isSuccess ? '🟢' : '🟠'}</span>
+                <span className="text-2xl sm:text-3xl bg-stone-50 p-2 rounded-2xl shadow-inner">{isSuccess ? '🟢' : '🟠'}</span>
                 <div>
-                    <h3 className="font-extrabold text-stone-800 text-xl">{dateKey}</h3>
-                    <p className="text-xs text-stone-500 font-bold uppercase tracking-wider">Daily Summary</p>
+                    <h3 className="font-extrabold text-stone-800 text-lg sm:text-xl">{dateKey}</h3>
+                    <p className="text-[11px] sm:text-xs text-stone-500 font-bold uppercase tracking-wider">Daily Summary</p>
                 </div>
               </div>
-              <button onClick={onClose} className="w-10 h-10 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold text-xl transition-colors">✕</button>
+              <button onClick={onClose} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold text-lg sm:text-xl transition-colors">✕</button>
             </div>
             
-            <div className={`mb-4 px-4 py-2 rounded-xl text-sm font-bold text-center border ${isSuccess ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
+            <div className={`mb-4 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-center border ${isSuccess ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
                 {isSuccess ? randomPraise : "沒關係，明天繼續努力找回節奏！🌿"}
             </div>
 
             {warningMsg && (
-              <div className={`mb-4 px-4 py-3 rounded-xl text-xs font-bold shadow-inner ${warningMsg.type === 'deficit' ? 'bg-orange-100 text-orange-800 border border-orange-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}`}>
+              <div className={`mb-4 px-4 py-2.5 rounded-xl text-xs font-bold shadow-inner ${warningMsg.type === 'deficit' ? 'bg-orange-100 text-orange-800 border border-orange-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}`}>
                   {warningMsg.text}
               </div>
             )}
 
-            <div className="mb-5">
-              <h4 className="text-sm font-black text-stone-600 mb-2 flex items-center justify-between bg-stone-50 px-4 py-2 rounded-xl">
+            <div className="mb-4 sm:mb-5">
+              <h4 className="text-xs sm:text-sm font-black text-stone-600 mb-2 flex items-center justify-between bg-stone-50 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl">
                 <span>🍽️ 總攝取 <span className="text-rose-500 ml-1">+{summary.intake}</span> kcal</span>
-                <span className="text-xs bg-white px-2 py-1 rounded-md shadow-sm">{foods.length} 項</span>
+                <span className="text-xs bg-white px-2 py-0.5 rounded-md shadow-2xs">{foods.length} 項</span>
               </h4>
-              <div className="max-h-28 overflow-y-auto space-y-2 px-1">
-                {foods.length === 0 ? <p className="text-stone-400 text-sm text-center py-2">無飲食記錄</p> : foods.map((f, i) => (
-                  <div key={i} className="flex justify-between items-center text-sm border-b border-stone-100 pb-2 last:border-0">
+              <div className="max-h-28 overflow-y-auto space-y-1.5 px-1">
+                {foods.length === 0 ? <p className="text-stone-400 text-xs sm:text-sm text-center py-2">無飲食記錄</p> : foods.map((f, i) => (
+                  <div key={i} className="flex justify-between items-center text-xs sm:text-sm border-b border-stone-100 pb-1.5 last:border-0">
                     <span className="text-stone-700 font-medium">{f.name} <span className="text-stone-400 text-xs ml-1">×{f.qty}{f.unit}</span></span>
                     <span className="font-bold text-stone-800">{f.totalKcal}</span>
                   </div>
@@ -1395,14 +1379,14 @@
               </div>
             </div>
 
-            <div className="mb-6">
-              <h4 className="text-sm font-black text-stone-600 mb-2 flex items-center justify-between bg-stone-50 px-4 py-2 rounded-xl">
+            <div className="mb-5 sm:mb-6">
+              <h4 className="text-xs sm:text-sm font-black text-stone-600 mb-2 flex items-center justify-between bg-stone-50 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl">
                 <span>🏃 總消耗 <span className="text-emerald-600 ml-1">-{summary.burn}</span> kcal</span>
-                <span className="text-xs bg-white px-2 py-1 rounded-md shadow-sm">{exercises.length} 項</span>
+                <span className="text-xs bg-white px-2 py-0.5 rounded-md shadow-2xs">{exercises.length} 項</span>
               </h4>
-              <div className="max-h-28 overflow-y-auto space-y-2 px-1">
-                {exercises.length === 0 ? <p className="text-stone-400 text-sm text-center py-2">無運動記錄</p> : exercises.map((e, i) => (
-                  <div key={i} className="flex justify-between items-center text-sm border-b border-stone-100 pb-2 last:border-0">
+              <div className="max-h-28 overflow-y-auto space-y-1.5 px-1">
+                {exercises.length === 0 ? <p className="text-stone-400 text-xs sm:text-sm text-center py-2">無運動記錄</p> : exercises.map((e, i) => (
+                  <div key={i} className="flex justify-between items-center text-xs sm:text-sm border-b border-stone-100 pb-1.5 last:border-0">
                     <span className="text-stone-700 font-medium">{e.name} <span className="text-stone-400 text-xs ml-1">{e.minutes}m</span></span>
                     <span className="font-bold text-emerald-600">-{e.burnKcal}</span>
                   </div>
@@ -1410,34 +1394,34 @@
               </div>
             </div>
 
-            <div className={`p-5 rounded-2xl mb-6 relative overflow-hidden ${isSuccess ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-200' : 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-lg shadow-rose-200'}`}>
+            <div className={`p-4 sm:p-5 rounded-2xl mb-6 relative overflow-hidden ${isSuccess ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-200' : 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-lg shadow-rose-200'}`}>
               <div className="absolute -right-6 -top-6 text-6xl opacity-20">{isSuccess ? '🎉' : '🔥'}</div>
               
-              <div className="text-xs text-white/80 font-mono mb-3 bg-black/10 inline-block px-3 py-1 rounded-lg">
+              <div className="text-[11px] sm:text-xs text-white/80 font-mono mb-2 bg-black/10 inline-block px-2.5 py-1 rounded-lg">
                 {baseline}(基) + {summary.burn}(動) - {summary.intake}(食)
               </div>
               <div className="flex items-end justify-between">
-                <span className="text-sm font-bold opacity-90">{isSuccess ? '熱量赤字' : '熱量超標'}</span>
+                <span className="text-xs sm:text-sm font-bold opacity-90">{isSuccess ? '熱量赤字' : '熱量超標'}</span>
                 <div className="text-right">
-                    <span className="text-4xl font-black tracking-tighter">
+                    <span className="text-3xl sm:text-4xl font-black tracking-tighter">
                     {isSuccess ? '-' : '+'}{Math.abs(summary.deficit)}
                     </span>
-                    <span className="text-sm font-medium ml-1 opacity-80">kcal</span>
+                    <span className="text-xs sm:text-sm font-medium ml-1 opacity-80">kcal</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3 sm:gap-4">
               <button 
                 onClick={onDeleteRequest} 
-                className="w-16 h-16 rounded-2xl border-2 border-rose-100 text-rose-500 hover:bg-rose-50 hover:border-rose-300 text-xl flex items-center justify-center transition-all shadow-sm shrink-0"
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 border-rose-100 text-rose-500 hover:bg-rose-50 hover:border-rose-300 text-lg sm:text-xl flex items-center justify-center transition-all shadow-xs shrink-0"
                 title="刪除此紀錄"
               >
                 🗑️
               </button>
               <button 
                 onClick={onEdit} 
-                className="flex-1 rounded-2xl bg-stone-800 hover:bg-black text-white text-lg font-bold transition-all shadow-lg flex items-center justify-center gap-2"
+                className="flex-1 rounded-2xl bg-stone-800 hover:bg-black text-white text-base sm:text-lg font-bold transition-all shadow-lg flex items-center justify-center gap-2"
               >
                 <span>✏️</span> 編輯當日資料
               </button>
@@ -1447,7 +1431,7 @@
       );
     }
 
-    // --- 11. 填寫 / 編輯記錄 Modal ---
+    // --- 11. 填寫 / 編輯記錄 Modal (v7：飲食攝取 title 縮小、改名「其它餐點」) ---
     function RecordModal({ dateKey, initialRecord, userWeight, baseline, onClose, onSave }) {
       const [foods, setFoods] = useState(initialRecord?.foods || []);
       const [exercises, setExercises] = useState(initialRecord?.exercises || []);
@@ -1542,42 +1526,42 @@
       const warningMsg = getWarningMessage(deficit);
 
       return (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto py-10">
-          <div className="bg-white rounded-[2rem] max-w-2xl w-full p-6 md:p-10 shadow-2xl border-4 border-emerald-100 my-auto">
-            <div className="flex items-center justify-between pb-6 border-b-2 border-stone-100 mb-6">
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-[2rem] max-w-2xl w-full p-4 sm:p-6 md:p-10 shadow-2xl border-4 border-emerald-100 my-auto">
+            <div className="flex items-center justify-between pb-4 sm:pb-6 border-b-2 border-stone-100 mb-5 sm:mb-6">
               <div>
-                <h3 className="font-extrabold text-stone-900 text-3xl mb-1">📝 紀錄收支</h3>
-                <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-lg tracking-wider">
+                <h3 className="font-extrabold text-stone-900 text-2xl sm:text-3xl mb-1">📝 紀錄收支</h3>
+                <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-lg tracking-wider">
                   {dateKey}
                 </span>
               </div>
-              <button onClick={onClose} className="w-12 h-12 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold text-xl transition-colors">✕</button>
+              <button onClick={onClose} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold text-lg sm:text-xl transition-colors">✕</button>
             </div>
 
-            {/* 飲食區塊 */}
-            <div className="mb-8 bg-stone-50 p-6 rounded-3xl border border-stone-200">
-              <div className="flex items-center justify-between mb-4">
-                <span className="font-extrabold text-stone-800 text-lg flex items-center gap-2">
-                  <span className="text-2xl">🥗</span> 飲食攝取 
-                  <span className="text-rose-500 font-black ml-2 bg-rose-100 px-2 rounded-md">+{Math.round(totalIntake)}</span>
+            {/* 飲食區塊 (v7：縮小 title 字體、修改為「其它餐點」) */}
+            <div className="mb-6 sm:mb-8 bg-stone-50 p-4 sm:p-6 rounded-3xl border border-stone-200">
+              <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
+                <span className="font-extrabold text-stone-800 text-sm sm:text-base flex items-center gap-1.5 shrink-0">
+                  <span className="text-base sm:text-xl">🥗</span> 飲食攝取 
+                  <span className="text-rose-500 font-black ml-1 bg-rose-100 px-2 py-0.5 rounded-md text-xs sm:text-sm">+{Math.round(totalIntake)}</span>
                 </span>
                 <button 
                   type="button"
                   onClick={() => setIsCustomFood(!isCustomFood)}
-                  className="text-sm font-bold text-emerald-600 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-xl transition-colors"
+                  className="text-xs sm:text-sm font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl transition-colors whitespace-nowrap shrink-0"
                 >
-                  {isCustomFood ? '📋 常用清單' : '✏️ 自訂餐點名稱'}
+                  {isCustomFood ? '📋 常用清單' : '✏️ 其它餐點'}
                 </button>
               </div>
 
               {!isCustomFood ? (
-                <div className="space-y-4 mb-2">
-                  <div className="flex flex-wrap gap-2">
+                <div className="space-y-3 sm:space-y-4 mb-2">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     {foodCategories.map(cat => (
                        <button
                          key={cat}
                          onClick={() => setSelectedCategory(cat)}
-                         className={`px-3 py-1.5 rounded-full text-xs md:text-sm font-bold border transition-colors ${
+                         className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold border transition-colors ${
                              selectedCategory === cat ? 'bg-stone-800 text-white border-stone-800 shadow-sm' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
                          }`}
                        >
@@ -1585,9 +1569,9 @@
                        </button>
                     ))}
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     <select 
-                      className="flex-1 px-4 py-3 border-2 border-stone-200 rounded-2xl text-base font-bold text-stone-700 focus:outline-none focus:border-emerald-500 bg-white shadow-sm"
+                      className="flex-1 px-3 py-2.5 sm:px-4 sm:py-3 border-2 border-stone-200 rounded-2xl text-sm sm:text-base font-bold text-stone-700 focus:outline-none focus:border-emerald-500 bg-white shadow-xs"
                       onChange={(e) => {
                         const item = filteredFoods.find(f => f.name === e.target.value);
                         if (item) setSelectedDbFood(item);
@@ -1606,12 +1590,12 @@
                         value={foodQty}
                         placeholder="份量"
                         onChange={(e) => handleDecimalChange(e.target.value, setFoodQty)}
-                        className="w-24 px-4 py-3 border-2 border-stone-200 rounded-2xl text-base font-bold text-center focus:outline-none focus:border-emerald-500 bg-white shadow-sm"
+                        className="w-20 sm:w-24 px-3 py-2.5 sm:px-4 sm:py-3 border-2 border-stone-200 rounded-2xl text-sm sm:text-base font-bold text-center focus:outline-none focus:border-emerald-500 bg-white shadow-xs"
                       />
                       <button 
                         type="button" 
                         onClick={handleAddFood}
-                        className="flex-1 sm:w-20 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-lg transition-colors shadow-md flex items-center justify-center"
+                        className="flex-1 sm:w-20 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-lg transition-colors shadow-md flex items-center justify-center py-2"
                       >
                         +
                       </button>
@@ -1619,13 +1603,13 @@
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col sm:flex-row gap-3 mb-2">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-2">
                   <input 
                     type="text" 
                     value={customFoodName}
                     placeholder="輸入餐點名稱 (系統自動估算熱量)"
                     onChange={(e) => setCustomFoodName(e.target.value)}
-                    className="flex-1 px-4 py-3 border-2 border-stone-200 rounded-2xl text-base font-bold text-stone-700 focus:outline-none focus:border-emerald-500 bg-white shadow-sm"
+                    className="flex-1 px-3 py-2.5 sm:px-4 sm:py-3 border-2 border-stone-200 rounded-2xl text-sm sm:text-base font-bold text-stone-700 focus:outline-none focus:border-emerald-500 bg-white shadow-xs"
                   />
                   <div className="flex gap-2 w-full sm:w-auto">
                     <input 
@@ -1633,12 +1617,12 @@
                       value={foodQty}
                       placeholder="份量"
                       onChange={(e) => handleDecimalChange(e.target.value, setFoodQty)}
-                      className="w-24 px-4 py-3 border-2 border-stone-200 rounded-2xl text-base font-bold text-center focus:outline-none focus:border-emerald-500 bg-white shadow-sm"
+                      className="w-20 sm:w-24 px-3 py-2.5 sm:px-4 sm:py-3 border-2 border-stone-200 rounded-2xl text-sm sm:text-base font-bold text-center focus:outline-none focus:border-emerald-500 bg-white shadow-xs"
                     />
                     <button 
                       type="button" 
                       onClick={handleAddFood}
-                      className="flex-1 sm:w-20 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-lg transition-colors shadow-md flex items-center justify-center"
+                      className="flex-1 sm:w-20 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-lg transition-colors shadow-md flex items-center justify-center py-2"
                     >
                       +
                     </button>
@@ -1646,19 +1630,19 @@
                 </div>
               )}
               
-              <p className="text-[10px] text-stone-400 mb-3 ml-1 font-medium tracking-wide">💡 註：品項熱量參考自衛福部食藥署「台灣食品營養成分資料庫」</p>
+              <p className="text-[10px] sm:text-xs text-stone-400 mb-2.5 ml-1 font-medium tracking-wide">💡 註：品項熱量參考自衛福部食藥署「台灣食品營養成分資料庫」</p>
 
-              <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-inner max-h-40 overflow-y-auto">
+              <div className="bg-white rounded-2xl p-3 sm:p-4 border border-stone-200 shadow-inner max-h-36 sm:max-h-40 overflow-y-auto">
                 {foods.length === 0 ? (
-                  <p className="text-stone-400 text-center py-4 font-bold text-sm">尚未新增食物</p>
+                  <p className="text-stone-400 text-center py-3 font-bold text-xs sm:text-sm">尚未新增食物</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 sm:space-y-2">
                       {foods.map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-center bg-stone-50 px-4 py-2.5 rounded-xl border border-stone-100 group hover:border-rose-200 transition-colors">
-                          <span className="font-bold text-stone-700">{item.name} <span className="text-stone-400 text-xs ml-2 font-normal">× {item.qty} {item.unit || '份'}</span></span>
-                          <div className="flex items-center gap-4">
-                            <span className="font-black text-rose-500 text-lg">{item.totalKcal}</span>
-                            <button onClick={() => handleRemoveFood(idx)} className="w-8 h-8 rounded-full bg-stone-200 hover:bg-rose-500 hover:text-white text-stone-500 flex items-center justify-center font-bold transition-colors">✕</button>
+                        <div key={idx} className="flex justify-between items-center bg-stone-50 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-stone-100 group hover:border-rose-200 transition-colors">
+                          <span className="font-bold text-stone-700 text-xs sm:text-sm">{item.name} <span className="text-stone-400 text-[11px] ml-1.5 font-normal">× {item.qty} {item.unit || '份'}</span></span>
+                          <div className="flex items-center gap-3">
+                            <span className="font-black text-rose-500 text-sm sm:text-base">{item.totalKcal}</span>
+                            <button onClick={() => handleRemoveFood(idx)} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-stone-200 hover:bg-rose-500 hover:text-white text-stone-500 flex items-center justify-center font-bold transition-colors text-xs">✕</button>
                           </div>
                         </div>
                       ))}
@@ -1668,19 +1652,19 @@
             </div>
 
             {/* 運動區塊 */}
-            <div className="mb-8 bg-stone-50 p-6 rounded-3xl border border-stone-200">
-              <span className="font-extrabold text-stone-800 text-lg flex items-center gap-2 mb-4">
-                <span className="text-2xl">🏃</span> 運動消耗
-                <span className="text-emerald-600 font-black ml-2 bg-emerald-100 px-2 rounded-md">-{Math.round(totalBurn)}</span>
+            <div className="mb-6 sm:mb-8 bg-stone-50 p-4 sm:p-6 rounded-3xl border border-stone-200">
+              <span className="font-extrabold text-stone-800 text-sm sm:text-base flex items-center gap-1.5 mb-3 sm:mb-4">
+                <span className="text-base sm:text-xl">🏃</span> 運動消耗
+                <span className="text-emerald-600 font-black ml-1 bg-emerald-100 px-2 py-0.5 rounded-md text-xs sm:text-sm">-{Math.round(totalBurn)}</span>
               </span>
               
-              <div className="space-y-4 mb-2">
-                <div className="flex flex-wrap gap-2">
+              <div className="space-y-3 sm:space-y-4 mb-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {exCategories.map(cat => (
                      <button
                        key={cat}
                        onClick={() => setSelectedExCategory(cat)}
-                       className={`px-3 py-1.5 rounded-full text-xs md:text-sm font-bold border transition-colors ${
+                       className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold border transition-colors ${
                            selectedExCategory === cat ? 'bg-stone-800 text-white border-stone-800 shadow-sm' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
                        }`}
                      >
@@ -1688,9 +1672,9 @@
                      </button>
                   ))}
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <select 
-                    className="flex-1 px-4 py-3 border-2 border-stone-200 rounded-2xl text-base font-bold text-stone-700 focus:outline-none focus:border-emerald-500 bg-white shadow-sm"
+                    className="flex-1 px-3 py-2.5 sm:px-4 sm:py-3 border-2 border-stone-200 rounded-2xl text-sm sm:text-base font-bold text-stone-700 focus:outline-none focus:border-emerald-500 bg-white shadow-xs"
                     onChange={(e) => {
                       const item = filteredExercises.find(m => m.name === e.target.value);
                       if (item) setSelectedExercise(item);
@@ -1710,33 +1694,33 @@
                         value={exerciseMinutes}
                         placeholder="分鐘"
                         onChange={(e) => handleIntegerChange(e.target.value, setExerciseMinutes)}
-                        className="w-24 px-4 py-3 border-2 border-stone-200 rounded-2xl text-base font-bold text-center focus:outline-none focus:border-emerald-500 bg-white shadow-sm pr-8"
+                        className="w-20 sm:w-24 px-3 py-2.5 sm:px-4 sm:py-3 border-2 border-stone-200 rounded-2xl text-sm sm:text-base font-bold text-center focus:outline-none focus:border-emerald-500 bg-white shadow-xs pr-7"
                       />
-                      <span className="absolute right-3 top-3.5 text-sm font-bold text-stone-400">m</span>
+                      <span className="absolute right-2.5 top-3 text-xs sm:text-sm font-bold text-stone-400">m</span>
                     </div>
                     <button 
                       type="button" 
                       onClick={handleAddExercise}
-                      className="flex-1 sm:w-20 bg-stone-800 hover:bg-black text-white rounded-2xl font-black text-lg transition-colors shadow-md flex items-center justify-center"
+                      className="flex-1 sm:w-20 bg-stone-800 hover:bg-black text-white rounded-2xl font-black text-lg transition-colors shadow-md flex items-center justify-center py-2"
                     >
                       +
                     </button>
                   </div>
                 </div>
               </div>
-              <p className="text-[10px] text-stone-400 mb-3 ml-1 font-medium tracking-wide">💡 註：消耗熱量依據國際通用的 代謝當量 (METs) 搭配您的體重計算</p>
+              <p className="text-[10px] sm:text-xs text-stone-400 mb-2.5 ml-1 font-medium tracking-wide">💡 註：消耗熱量依據國際通用的 代謝當量 (METs) 搭配您的體重計算</p>
 
-              <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-inner max-h-32 overflow-y-auto">
+              <div className="bg-white rounded-2xl p-3 sm:p-4 border border-stone-200 shadow-inner max-h-32 overflow-y-auto">
                 {exercises.length === 0 ? (
-                  <p className="text-stone-400 text-center py-4 font-bold text-sm">尚未新增運動 (可略過)</p>
+                  <p className="text-stone-400 text-center py-3 font-bold text-xs sm:text-sm">尚未新增運動 (可略過)</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 sm:space-y-2">
                       {exercises.map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-center bg-emerald-50 px-4 py-2.5 rounded-xl border border-emerald-100 group hover:border-rose-200 transition-colors">
-                          <span className="font-bold text-emerald-900">{item.name} <span className="text-emerald-600/70 text-xs ml-2 font-normal">{item.minutes} min</span></span>
-                          <div className="flex items-center gap-4">
-                            <span className="font-black text-emerald-600 text-lg">-{item.burnKcal}</span>
-                            <button onClick={() => handleRemoveExercise(idx)} className="w-8 h-8 rounded-full bg-emerald-200/50 hover:bg-rose-500 hover:text-white text-emerald-700 flex items-center justify-center font-bold transition-colors">✕</button>
+                        <div key={idx} className="flex justify-between items-center bg-emerald-50 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-emerald-100 group hover:border-rose-200 transition-colors">
+                          <span className="font-bold text-emerald-900 text-xs sm:text-sm">{item.name} <span className="text-emerald-600/70 text-[11px] ml-1.5 font-normal">{item.minutes} min</span></span>
+                          <div className="flex items-center gap-3">
+                            <span className="font-black text-emerald-600 text-sm sm:text-base">-{item.burnKcal}</span>
+                            <button onClick={() => handleRemoveExercise(idx)} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-200/50 hover:bg-rose-500 hover:text-white text-emerald-700 flex items-center justify-center font-bold transition-colors text-xs">✕</button>
                           </div>
                         </div>
                       ))}
@@ -1747,41 +1731,41 @@
 
             {/* 即時試算儀表列 */}
             {warningMsg && (
-              <div className={`mb-3 px-4 py-3 rounded-xl text-xs font-bold shadow-inner border ${warningMsg.type === 'deficit' ? 'bg-orange-100 text-orange-800 border-orange-300' : 'bg-rose-100 text-rose-800 border-rose-300'}`}>
+              <div className={`mb-3 px-4 py-2.5 rounded-xl text-xs font-bold shadow-inner border ${warningMsg.type === 'deficit' ? 'bg-orange-100 text-orange-800 border-orange-300' : 'bg-rose-100 text-rose-800 border-rose-300'}`}>
                   {warningMsg.text}
               </div>
             )}
             
-            <div className={`p-6 rounded-[2rem] mb-8 flex flex-col md:flex-row justify-between items-center gap-4 border-2 transition-colors ${deficit >= 0 ? 'bg-brand-light border-brand-mint shadow-lg shadow-brand-mint/20' : 'bg-rose-50 border-rose-200 shadow-lg shadow-rose-200/50'}`}>
-              <div className="text-sm font-black text-stone-600 bg-white/50 px-4 py-2 rounded-xl backdrop-blur-sm border border-stone-200/50">
-                {baseline} <span className="text-xs text-stone-400 mx-1">基</span> + 
-                {Math.round(totalBurn)} <span className="text-xs text-stone-400 mx-1">動</span> - 
-                <span className="text-rose-500 ml-1">{Math.round(totalIntake)}</span> <span className="text-xs text-rose-300 mx-1">食</span>
+            <div className={`p-4 sm:p-6 rounded-[2rem] mb-6 sm:mb-8 flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4 border-2 transition-colors ${deficit >= 0 ? 'bg-brand-light border-brand-mint shadow-lg shadow-brand-mint/20' : 'bg-rose-50 border-rose-200 shadow-lg shadow-rose-200/50'}`}>
+              <div className="text-xs sm:text-sm font-black text-stone-600 bg-white/60 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl backdrop-blur-sm border border-stone-200/50">
+                {baseline} <span className="text-[10px] text-stone-400 mx-0.5">基</span> + 
+                {Math.round(totalBurn)} <span className="text-[10px] text-stone-400 mx-0.5">動</span> - 
+                <span className="text-rose-500 ml-1">{Math.round(totalIntake)}</span> <span className="text-[10px] text-rose-300 mx-0.5">食</span>
               </div>
               <div className="flex flex-col items-center md:items-end">
-                <span className="text-xs font-bold text-stone-500 uppercase tracking-widest mb-1">Total Result</span>
+                <span className="text-[10px] sm:text-xs font-bold text-stone-500 uppercase tracking-widest mb-0.5">Total Result</span>
                 <div className="flex items-baseline gap-1">
-                    <span className={`text-5xl font-black tracking-tighter ${deficit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <span className={`text-4xl sm:text-5xl font-black tracking-tighter ${deficit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {deficit >= 0 ? '-' : '+'}{Math.abs(deficit)}
                     </span>
-                    <span className="font-bold text-stone-400">kcal</span>
+                    <span className="font-bold text-stone-400 text-xs sm:text-sm">kcal</span>
                 </div>
               </div>
             </div>
 
             {/* 儲存按鈕 */}
-            <div className="flex gap-4">
+            <div className="flex gap-3 sm:gap-4">
               <button 
                 type="button" 
                 onClick={onClose}
-                className="w-1/3 py-4 rounded-2xl border-2 border-stone-200 text-stone-500 hover:bg-stone-50 text-lg font-bold transition-colors"
+                className="w-1/3 py-3.5 sm:py-4 rounded-2xl border-2 border-stone-200 text-stone-500 hover:bg-stone-50 text-base sm:text-lg font-bold transition-colors"
               >
                 取消
               </button>
               <button 
                 type="button" 
                 onClick={() => onSave(foods, exercises)}
-                className="w-2/3 py-4 rounded-2xl bg-stone-800 hover:bg-black text-white text-xl font-bold shadow-xl shadow-stone-800/20 transition-transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                className="w-2/3 py-3.5 sm:py-4 rounded-2xl bg-stone-800 hover:bg-black text-white text-base sm:text-xl font-bold shadow-xl shadow-stone-800/20 transition-transform hover:-translate-y-1 flex items-center justify-center gap-2"
               >
                 💾 儲存今日紀錄
               </button>
@@ -1825,23 +1809,23 @@
 
         return (
             <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-                <div className="bg-white rounded-[2rem] max-w-sm w-full p-8 text-center shadow-2xl border-4 border-emerald-100">
-                    <h3 className="text-2xl font-black text-stone-800 mb-6">更換大頭貼</h3>
+                <div className="bg-white rounded-[2rem] max-w-sm w-full p-6 sm:p-8 text-center shadow-2xl border-4 border-emerald-100">
+                    <h3 className="text-xl sm:text-2xl font-black text-stone-800 mb-5 sm:mb-6">更換大頭貼</h3>
                     
-                    <div className="w-32 h-32 mx-auto rounded-full border-4 border-emerald-400 overflow-hidden bg-emerald-50 flex items-center justify-center mb-6 shadow-xl relative group">
+                    <div className="w-28 h-28 sm:w-32 sm:h-32 mx-auto rounded-full border-4 border-emerald-400 overflow-hidden bg-emerald-50 flex items-center justify-center mb-5 sm:mb-6 shadow-xl relative group">
                         {avatarType === 'custom' && avatarImage ? (
                             <img src={avatarImage} alt="Custom Avatar" className="w-full h-full object-cover" />
                         ) : (
-                            <span className="text-6xl">{AVATAR_OPTIONS.find(a => a.id === avatarType)?.icon || '🌱'}</span>
+                            <span className="text-5xl sm:text-6xl">{AVATAR_OPTIONS.find(a => a.id === avatarType)?.icon || '🌱'}</span>
                         )}
                     </div>
 
-                    <div className="flex gap-3 mb-6 flex-wrap justify-center">
+                    <div className="flex gap-2.5 sm:gap-3 mb-5 sm:mb-6 flex-wrap justify-center">
                         {AVATAR_OPTIONS.map(opt => (
                             <button
                                 key={opt.id}
                                 onClick={() => setAvatarType(opt.id)}
-                                className={`w-14 h-14 rounded-full text-2xl border-2 flex items-center justify-center transition-all ${
+                                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full text-xl sm:text-2xl border-2 flex items-center justify-center transition-all ${
                                     avatarType === opt.id ? 'border-emerald-500 bg-emerald-100 scale-110 shadow-md' : 'border-stone-200 bg-stone-50 hover:bg-stone-100'
                                 }`}
                             >
@@ -1850,7 +1834,7 @@
                         ))}
                     </div>
 
-                    <div className="mb-8">
+                    <div className="mb-6 sm:mb-8">
                         <input 
                             type="file" 
                             accept="image/*" 
@@ -1860,17 +1844,17 @@
                         />
                         <button 
                             onClick={() => fileInputRef.current.click()}
-                            className="w-full py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-xl border border-stone-300 transition-colors flex items-center justify-center gap-2"
+                            className="w-full py-2.5 sm:py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-xl border border-stone-300 transition-colors flex items-center justify-center gap-2 text-xs sm:text-sm"
                         >
                             <span>📸 上傳自訂照片</span>
                         </button>
                     </div>
 
                     <div className="flex gap-3">
-                      <button onClick={onClose} className="w-1/2 py-3 border-2 border-stone-200 text-stone-600 rounded-xl font-bold hover:bg-stone-50 transition-colors">
+                      <button onClick={onClose} className="w-1/2 py-2.5 sm:py-3 border-2 border-stone-200 text-stone-600 rounded-xl font-bold hover:bg-stone-50 transition-colors text-xs sm:text-sm">
                         取消
                       </button>
-                      <button onClick={handleSave} className="w-1/2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg transition-colors">
+                      <button onClick={handleSave} className="w-1/2 py-2.5 sm:py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg transition-colors text-xs sm:text-sm">
                         確定更換
                       </button>
                     </div>
@@ -1911,75 +1895,75 @@
       };
 
       return (
-        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto py-10">
-          <div className="bg-white rounded-[2rem] max-w-lg w-full p-8 md:p-10 shadow-2xl border-2 border-stone-100 my-auto">
-            <div className="flex items-center justify-between pb-6 border-b-2 border-stone-100 mb-8">
-              <h3 className="font-extrabold text-stone-900 text-2xl flex items-center gap-2">⚙️ 編輯設定</h3>
-              <button onClick={onClose} className="w-10 h-10 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold text-lg transition-colors">✕</button>
+        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-[2rem] max-w-lg w-full p-6 sm:p-8 md:p-10 shadow-2xl border-2 border-stone-100 my-auto">
+            <div className="flex items-center justify-between pb-4 sm:pb-6 border-b-2 border-stone-100 mb-6 sm:mb-8">
+              <h3 className="font-extrabold text-stone-900 text-xl sm:text-2xl flex items-center gap-2">⚙️ 編輯設定</h3>
+              <button onClick={onClose} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold text-lg transition-colors">✕</button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="bg-stone-50 p-4 rounded-2xl">
-                <label className="block text-sm font-bold text-stone-600 mb-2">暱稱 (最多10字)</label>
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              <div className="bg-stone-50 p-3.5 sm:p-4 rounded-2xl">
+                <label className="block text-xs sm:text-sm font-bold text-stone-600 mb-1.5">暱稱 (最多10字)</label>
                 <input 
                   type="text" 
                   maxLength={10}
                   value={username} 
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl text-lg font-bold focus:outline-none focus:border-emerald-500 bg-white"
+                  className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 border-2 border-stone-200 rounded-xl text-base sm:text-lg font-bold focus:outline-none focus:border-emerald-500 bg-white"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-stone-50 p-4 rounded-2xl">
-                  <label className="block text-sm font-bold text-stone-600 mb-2">生理性別</label>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="bg-stone-50 p-3.5 sm:p-4 rounded-2xl">
+                  <label className="block text-xs sm:text-sm font-bold text-stone-600 mb-1.5">生理性別</label>
                   <select 
                     value={gender} 
                     onChange={(e) => setGender(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl text-lg font-bold focus:outline-none focus:border-emerald-500 bg-white"
+                    className="w-full px-3 py-2.5 sm:px-4 sm:py-3 border-2 border-stone-200 rounded-xl text-sm sm:text-lg font-bold focus:outline-none focus:border-emerald-500 bg-white"
                   >
                     <option value="female">🙋‍♀️ 女生</option>
                     <option value="male">🙋‍♂️ 男生</option>
                   </select>
                 </div>
-                <div className="bg-stone-50 p-4 rounded-2xl">
-                  <label className="block text-sm font-bold text-stone-600 mb-2">出生年月日</label>
+                <div className="bg-stone-50 p-3.5 sm:p-4 rounded-2xl">
+                  <label className="block text-xs sm:text-sm font-bold text-stone-600 mb-1.5">出生年月日</label>
                   <input 
                     type="date" 
                     value={birthday} 
                     onChange={(e) => setBirthday(e.target.value)}
-                    className="w-full px-3 py-3 border-2 border-stone-200 rounded-xl text-base font-bold focus:outline-none focus:border-emerald-500 bg-white"
+                    className="w-full px-2.5 py-2.5 sm:px-3 sm:py-3 border-2 border-stone-200 rounded-xl text-xs sm:text-base font-bold focus:outline-none focus:border-emerald-500 bg-white"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-stone-50 p-4 rounded-2xl">
-                  <label className="block text-sm font-bold text-stone-600 mb-2">身高 (cm)</label>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="bg-stone-50 p-3.5 sm:p-4 rounded-2xl">
+                  <label className="block text-xs sm:text-sm font-bold text-stone-600 mb-1.5">身高 (cm)</label>
                   <input 
                     type="number" 
                     value={height} 
                     onChange={(e) => setHeight(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl text-lg font-bold focus:outline-none focus:border-emerald-500 bg-white"
+                    className="w-full px-3 py-2.5 sm:px-4 sm:py-3 border-2 border-stone-200 rounded-xl text-base sm:text-lg font-bold focus:outline-none focus:border-emerald-500 bg-white"
                   />
                 </div>
-                <div className="bg-stone-50 p-4 rounded-2xl">
-                  <label className="block text-sm font-bold text-stone-600 mb-2">體重 (kg)</label>
+                <div className="bg-stone-50 p-3.5 sm:p-4 rounded-2xl">
+                  <label className="block text-xs sm:text-sm font-bold text-stone-600 mb-1.5">體重 (kg)</label>
                   <input 
                     type="number" 
                     value={weight} 
                     onChange={(e) => setWeight(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl text-lg font-bold focus:outline-none focus:border-emerald-500 bg-white"
+                    className="w-full px-3 py-2.5 sm:px-4 sm:py-3 border-2 border-stone-200 rounded-xl text-base sm:text-lg font-bold focus:outline-none focus:border-emerald-500 bg-white"
                   />
                 </div>
               </div>
 
-              <div className="bg-stone-50 p-4 rounded-2xl">
-                <label className="block text-sm font-bold text-stone-600 mb-2">日常活動型態</label>
+              <div className="bg-stone-50 p-3.5 sm:p-4 rounded-2xl">
+                <label className="block text-xs sm:text-sm font-bold text-stone-600 mb-1.5">日常活動型態</label>
                 <select 
                   value={activity} 
                   onChange={(e) => setActivity(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl text-base font-bold focus:outline-none focus:border-emerald-500 bg-white"
+                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 border-2 border-stone-200 rounded-xl text-xs sm:text-base font-bold focus:outline-none focus:border-emerald-500 bg-white"
                 >
                   {ACTIVITY_LEVELS.map(a => (
                     <option key={a.id} value={a.id}>{a.emoji} {a.label} ({a.desc})</option>
@@ -1987,17 +1971,17 @@
                 </select>
               </div>
 
-              <div className="flex gap-4 pt-4 border-t-2 border-stone-100">
+              <div className="flex gap-3 sm:gap-4 pt-3 sm:pt-4 border-t-2 border-stone-100">
                 <button 
                   type="button" 
                   onClick={onClose} 
-                  className="w-1/3 py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-lg font-bold hover:bg-stone-50 transition-colors"
+                  className="w-1/3 py-3 sm:py-4 border-2 border-stone-200 text-stone-600 rounded-2xl text-base sm:text-lg font-bold hover:bg-stone-50 transition-colors"
                 >
                   取消
                 </button>
                 <button 
                   type="submit" 
-                  className="w-2/3 py-4 bg-stone-800 hover:bg-black text-white rounded-2xl text-lg font-bold shadow-xl transition-colors"
+                  className="w-2/3 py-3 sm:py-4 bg-stone-800 hover:bg-black text-white rounded-2xl text-base sm:text-lg font-bold shadow-xl transition-colors"
                 >
                   更新設定
                 </button>
@@ -2012,24 +1996,24 @@
     function RebirthConfirmModal({ onClose, onConfirm }) {
       return (
         <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-stone-900 rounded-[2rem] max-w-sm w-full p-8 text-center shadow-2xl border border-stone-700">
-            <div className="w-24 h-24 bg-stone-800 text-white border-2 border-stone-700 rounded-full flex items-center justify-center mx-auto mb-6 text-5xl shadow-inner">
+          <div className="bg-stone-900 rounded-[2rem] max-w-sm w-full p-6 sm:p-8 text-center shadow-2xl border border-stone-700">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-stone-800 text-white border-2 border-stone-700 rounded-full flex items-center justify-center mx-auto mb-5 sm:mb-6 text-4xl sm:text-5xl shadow-inner">
               🍵
             </div>
-            <h3 className="text-2xl font-black text-white mb-3">喝下孟婆湯？</h3>
-            <p className="text-sm text-stone-400 leading-relaxed mb-8 font-medium">
+            <h3 className="text-xl sm:text-2xl font-black text-white mb-2 sm:mb-3">喝下孟婆湯？</h3>
+            <p className="text-xs sm:text-sm text-stone-400 leading-relaxed mb-6 sm:mb-8 font-medium">
               紀錄的心血將化為烏有。<br/>過去的點滴將被徹底遺忘，<br/>確定要開啟全新的人生旅程嗎？
             </p>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5 sm:gap-3">
               <button 
                 onClick={onConfirm}
-                className="w-full py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-lg font-bold transition-all shadow-lg shadow-rose-900/50"
+                className="w-full py-3.5 sm:py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-base sm:text-lg font-bold transition-all shadow-lg shadow-rose-900/50"
               >
                 忘記一切，重新出生
               </button>
               <button 
                 onClick={onClose}
-                className="w-full py-3 text-stone-400 hover:text-white hover:bg-stone-800 rounded-xl text-sm font-bold transition-colors"
+                className="w-full py-2.5 sm:py-3 text-stone-400 hover:text-white hover:bg-stone-800 rounded-xl text-xs sm:text-sm font-bold transition-colors"
               >
                 繼續前世記憶 (取消)
               </button>
@@ -2043,19 +2027,19 @@
     function DeleteConfirmModal({ dateKey, onClose, onConfirm }) {
       return (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-[2rem] max-w-sm w-full p-8 text-center shadow-2xl border-4 border-rose-100">
-            <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-inner border border-rose-100">
+          <div className="bg-white rounded-[2rem] max-w-sm w-full p-6 sm:p-8 text-center shadow-2xl border-4 border-rose-100">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 text-3xl sm:text-4xl shadow-inner border border-rose-100">
               🗑️
             </div>
-            <h3 className="text-2xl font-black text-stone-900 mb-2">確定刪除？</h3>
-            <p className="text-sm text-stone-500 mb-8 font-medium">
+            <h3 className="text-xl sm:text-2xl font-black text-stone-900 mb-1 sm:mb-2">確定刪除？</h3>
+            <p className="text-xs sm:text-sm text-stone-500 mb-6 sm:mb-8 font-medium">
               刪除後，<strong className="text-rose-600">{dateKey}</strong> 的紀錄將永久移除，日期變回未填寫狀態。
             </p>
             <div className="flex gap-3">
-              <button onClick={onClose} className="w-1/2 py-4 border-2 border-stone-200 hover:bg-stone-50 text-stone-600 rounded-2xl text-base font-bold transition-colors">
+              <button onClick={onClose} className="w-1/2 py-3 sm:py-4 border-2 border-stone-200 hover:bg-stone-50 text-stone-600 rounded-2xl text-sm sm:text-base font-bold transition-colors">
                 取消
               </button>
-              <button onClick={onConfirm} className="w-1/2 py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl text-base font-bold shadow-lg shadow-rose-200 transition-colors">
+              <button onClick={onConfirm} className="w-1/2 py-3 sm:py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl text-sm sm:text-base font-bold shadow-lg shadow-rose-200 transition-colors">
                 確定刪除
               </button>
             </div>
@@ -2068,17 +2052,17 @@
     function GlobalErrorModal({ message }) {
       return (
         <div className="fixed inset-0 bg-stone-900/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-[2rem] max-w-sm w-full p-8 text-center shadow-2xl border-4 border-amber-200">
-            <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl border border-amber-100 shadow-inner">
+          <div className="bg-white rounded-[2rem] max-w-sm w-full p-6 sm:p-8 text-center shadow-2xl border-4 border-amber-200">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 text-3xl sm:text-4xl border border-amber-100 shadow-inner">
               🩹
             </div>
-            <h3 className="text-2xl font-black text-stone-900 mb-3">哎呀！遇到小阻礙</h3>
-            <p className="text-sm text-stone-600 mb-8 leading-relaxed font-medium bg-amber-50 p-4 rounded-xl">
+            <h3 className="text-xl sm:text-2xl font-black text-stone-900 mb-2 sm:mb-3">哎呀！遇到小阻礙</h3>
+            <p className="text-xs sm:text-sm text-stone-600 mb-6 sm:mb-8 leading-relaxed font-medium bg-amber-50 p-3.5 sm:p-4 rounded-xl">
               {message || "系統發生未預期的狀況，請點擊下方按鈕重新整理嘗試。"}
             </p>
             <button 
               onClick={() => window.location.reload()}
-              className="w-full py-4 bg-stone-800 hover:bg-black text-white rounded-2xl text-lg font-bold shadow-xl transition-colors"
+              className="w-full py-3.5 sm:py-4 bg-stone-800 hover:bg-black text-white rounded-2xl text-base sm:text-lg font-bold shadow-xl transition-colors"
             >
               重新整理並重試 🔄
             </button>
